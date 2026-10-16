@@ -1,0 +1,55 @@
+# Unity .gitignore
+# Baseado no template oficial do GitHub para Unity
+
+# Pastas de cache e temporarias geradas pelo Unity (NAO COMITAR)
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+
+# Pastas de ferramentas e pacotes locais
+[Aa]ssets/AssetStoreTools*
+
+# Visual Studio / Rider / VS Code
+.vscode/
+.vs/
+.idea/
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity3D generated meta files
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Relatórios de crash
+sysinfo.txt
+*.stackdump
+
+# Builds exportadas
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# Arquivos do Sistema Operacional
+.DS_Store
+Thumbs.db
+desktop.ini
