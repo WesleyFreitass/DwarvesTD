@@ -73,6 +73,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DwarvesTD.Towers.BaseDwarfTower
   dwarfName: Canhoneiro de Polvora
   cost: 250
+  category: 1
   attackRange: 5.5
   fireCooldown: 1.8
   damage: 3

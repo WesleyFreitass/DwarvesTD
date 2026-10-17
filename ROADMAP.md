@@ -9,8 +9,8 @@ Este documento reúne o planejamento completo de desenvolvimento do jogo **Dwarv
 ```mermaid
 flowchart LR
     Fase1["Fase 1: Core Loop & Economia ✅"] --> Fase2["Fase 2: Bestiário de Goblins ✅"]
-    Fase2 --> Fase3["Fase 3: Arsenal dos Anões 🟡"]
-    Fase3 --> Fase4["Fase 4: Sistema de Upgrades (3 Paths)"]
+    Fase2 --> Fase3["Fase 3: Arsenal dos Anões ✅"]
+    Fase3 --> Fase4["Fase 4: Sistema de Upgrades (3 Paths) 🟡"]
     Fase4 --> Fase5["Fase 5: Mapas & Terrenos"]
     Fase5 --> Fase6["Fase 6: Polimento Visual, UI & Áudio"]
 ```
@@ -26,12 +26,15 @@ flowchart LR
 | **Mira BTD6 ("First", etc.)** | ✅ Concluído | Foco no primeiro goblin do caminho com rotação suave. |
 | **Blindagem de Performance** | ✅ Concluído | Generic Object Pooling, distância ao quadrado e Forward rendering URP (60–120 FPS). |
 | **Otimização Extrema de FPS** | ✅ Concluído | MaterialPropertyBlock (zero clones), remoção de colisores em projéteis, eliminação de raízes quadradas no PathFollower e cache de strings na HUD. |
-| **Posicionamento de Torres** | ✅ Concluído | Sistema de compra e colocação no chão com mouse e preview de alcance. |
+| **Posicionamento de Torres** | ✅ Concluído | Sistema de compra e colocação no chão com mouse, preview de alcance e suporte às 4 guildas + Herói. |
 | **Bestiário de Goblins (4 Tipos)** | ✅ Concluído | Recruta (Verde), Corredor (Amarelo veloz), Blindado (Cinza aço resistente) e Troll Chefe (Marrom). |
 | **Divisão no Caminho (`SplitOnDeath`)**| ✅ Concluído | Monstro pai estoura em 3 recrutas no mesmo ponto da trilha ao morrer (estilo MOAB). |
 | **Tabela Curada das 10 Rodadas** | ✅ Concluído | Progressão rítmica com escalonamento de dificuldade e recompensas até a Rodada 10. |
 | **Torre 1: Besteiro Anão** | ✅ Concluído | Clã Combatente: $120 ouro, tiro direto rápido com machados. |
 | **Torre 2: Canhoneiro de Pólvora** | ✅ Concluído | Engenharia & Cerco: $250 ouro, dano em área (AoE 2.5m), ignora blindagens. |
+| **Torre 3: Ferreiro Rúnico** | ✅ Concluído | Forja Rúnica & Alquimia: $320 ouro, dano mágico, penetra blindagens e aplica lentidão/gelo de 45% por 2.5s. |
+| **Torre 4: Mina de Ouro dos Anões** | ✅ Concluído | Mineração & Suporte: $400 ouro, economia estilo Banana Farm com rendimento de +80 ouro no término de cada rodada. |
+| **Herói: Comandante Thorin** | ✅ Concluído | Liderança do Clã: $150 ouro (limite 1 por partida), progressão Níveis 1–10, ganho de XP por abate/rodada e habilidade ativa "Grito de Guerra". |
 
 ---
 
@@ -54,13 +57,13 @@ flowchart LR
 - [x] **Tabela Curada das 10 Rodadas:** Pacing inteligente com escalada de dificuldade progressiva até o confronto do Chefe na Rodada 10.
 
 ### [Fase 3] — Categorias de Torres & Heróis (As Guildas dos Anões)
-- [x] **Sistema de Heróis Comandantes (Opção A):** 1 Herói por partida que ganha XP e habilidades ativas.
-- [x] **Estrutura de Categorias de Torres (Estilo BTD6):**
-  1. **Clã Combatente (Primárias):** Besteiro Anão implementado ($120, tiro direto rápido).
-  2. **Engenharia & Cerco (Militares):** Canhoneiro de Pólvora implementado ($250, dano em área AoE, perfura armaduras).
-  3. **Forja Rúnica & Alquimia (Mágicas):** Magias ancestrais, runas elementais e efeitos especiais.
-  4. **Mineração & Suporte (Suporte):** Torres de economia (Mina de ouro), postos de vigia e armadilhas.
-- [ ] Implementação da 3ª torre: **Ferreiro Rúnico** (Dano mágico / desaceleração elemental).
+- [x] **Sistema de Heróis Comandantes (Opção A):** Herói Comandante Thorin Barba-de-Ferro implementado (Limite de 1 herói por partida, progressão Níveis 1–10, ganho de XP contínuo por abates e por rodadas, habilidade ativa "Grito de Guerra" com buff de +40% cadência e +1 dano para aliados próximos, aura passiva de alcance e martelada atordoadora).
+- [x] **Estrutura Completa das 4 Categorias de Torres (Estilo BTD6):**
+  1. **Clã Combatente (Primárias):** Besteiro Anão ($120, tiro direto rápido com machados).
+  2. **Engenharia & Cerco (Militares):** Canhoneiro de Pólvora ($250, dano em área AoE 2.5m, ignora armaduras).
+  3. **Forja Rúnica & Alquimia (Mágicas):** Ferreiro Rúnico ($320, dano mágico, perfura blindagens e aplica 45% lentidão/gelo com feedback visual ciano).
+  4. **Mineração & Suporte (Suporte):** Mina de Ouro dos Anões ($400, torre de economia que gera +80 ouro extra no fim de cada rodada).
+- [x] **Integração na HUD e Sistema de Colocação:** Abas dedicadas no painel lateral direito, módulo de herói com barra de XP/nível e botão de ativação de habilidade com tempo de recarga visual.
 
 ### [Fase 4] — Sistema de Upgrades (Árvore de 3 Caminhos estilo BTD6)
 - [x] **Definição da Mecânica de Evolução (Opção A):** 3 Caminhos de melhoria por torre (Top, Mid, Bottom) com limite de especialização (Caminho principal + secundário crosspath).

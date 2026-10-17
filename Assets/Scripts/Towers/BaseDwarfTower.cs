@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using DwarvesTD.Core;
 using DwarvesTD.Enemies;
 using DwarvesTD.Projectiles;
@@ -7,20 +8,32 @@ namespace DwarvesTD.Towers
 {
     public enum TargetPriority
     {
-        First,    // Goblin mais avanado no caminho (padro BTD6)
-        Last,     // Goblin mais recuado no incio do caminho
+        First,    // Goblin mais avançado no caminho (padrão BTD6)
+        Last,     // Goblin mais recuado no início do caminho
         Strongest,// Goblin com mais vida
-        Closest   // Goblin mais prximo fisicamente da torre
+        Closest   // Goblin mais próximo fisicamente da torre
+    }
+
+    public enum TowerCategory
+    {
+        Cla,      // Primárias: Besteiro, Guerreiro
+        Cerco,    // Militares: Canhão, Balista
+        Runas,    // Mágicas: Ferreiro Rúnico, Golem
+        Apoio,    // Suporte: Mina de Ouro, Posto de Vigia
+        Heroi     // Heróis Comandantes
     }
 
     public class BaseDwarfTower : MonoBehaviour
     {
-        [Header("Tower Identity")]
-        [SerializeField] private string dwarfName = "Besteiro Ano";
-        [SerializeField] private int cost = 120;
+        public static readonly List<BaseDwarfTower> ActiveTowers = new List<BaseDwarfTower>();
 
-        [Header("Variable Stats (Customizvel por tipo de torre)")]
-        [Tooltip("Raio de alcance da torre. Totalmente varivel.")]
+        [Header("Tower Identity")]
+        [SerializeField] private string dwarfName = "Besteiro Anão";
+        [SerializeField] private int cost = 120;
+        [SerializeField] private TowerCategory category = TowerCategory.Cla;
+
+        [Header("Variable Stats (Customizável por tipo de torre)")]
+        [Tooltip("Raio de alcance da torre. Totalmente variável.")]
         [SerializeField] private float attackRange = 5.0f;
 
         [Tooltip("Tempo em segundos entre cada disparo.")]
@@ -29,21 +42,22 @@ namespace DwarvesTD.Towers
         [Tooltip("Dano infligido por cada disparo.")]
         [SerializeField] private int damage = 1;
 
-        [Tooltip("Velocidade do projtil disparado.")]
+        [Tooltip("Velocidade do projétil disparado.")]
         [SerializeField] private float projectileSpeed = 16f;
 
         [Header("Targeting")]
         [SerializeField] private TargetPriority priority = TargetPriority.First;
 
         [Header("References")]
-        [SerializeField] private Transform rotatingPart; // Cabea/torreta que mira no goblin
-        [SerializeField] private Transform firePoint;     // Ponto de sada do projtil
+        [SerializeField] private Transform rotatingPart; // Cabeça/torreta que mira no goblin
+        [SerializeField] private Transform firePoint;     // Ponto de saída do projétil
         [SerializeField] private GameObject projectilePrefab;
         [SerializeField] private GameObject rangeIndicatorVisual;
 
-        public float AttackRange => attackRange;
+        public float AttackRange => attackRange * rangeBuffMultiplier;
         public int Cost => cost;
         public string DwarfName => dwarfName;
+        public TowerCategory Category => category;
         public TargetPriority Priority
         {
             get => priority;
@@ -52,13 +66,34 @@ namespace DwarvesTD.Towers
 
         private float fireTimer = 0f;
         private float retargetTimer = 0f;
-        private const float RETARGET_INTERVAL = 0.08f; // 12 checks por segundo em vez de 60+ (otimizao massiva)
+        private const float RETARGET_INTERVAL = 0.08f; // 12 checks por segundo em vez de 60+ (otimização massiva)
         private BaseGoblin currentTarget;
         private float sqrAttackRange;
+
+        // Buffs temporários ou auras (ex: Grito de Guerra do Herói Comandante)
+        private float attackSpeedBuffMultiplier = 1f;
+        private float attackSpeedBuffTimer = 0f;
+        private int bonusDamageBuff = 0;
+        private float bonusDamageBuffTimer = 0f;
+        private float rangeBuffMultiplier = 1f;
+        private float rangeBuffTimer = 0f;
 
         private void Awake()
         {
             UpdateSqrRange();
+        }
+
+        private void OnEnable()
+        {
+            if (!ActiveTowers.Contains(this))
+            {
+                ActiveTowers.Add(this);
+            }
+        }
+
+        private void OnDisable()
+        {
+            ActiveTowers.Remove(this);
         }
 
         private void OnValidate()
@@ -68,7 +103,28 @@ namespace DwarvesTD.Towers
 
         private void UpdateSqrRange()
         {
-            sqrAttackRange = attackRange * attackRange;
+            float effectiveRange = attackRange * rangeBuffMultiplier;
+            sqrAttackRange = effectiveRange * effectiveRange;
+        }
+
+        public void ApplyAttackSpeedBuff(float bonusPercent, float duration)
+        {
+            attackSpeedBuffMultiplier = 1f + bonusPercent;
+            attackSpeedBuffTimer = Mathf.Max(attackSpeedBuffTimer, duration);
+        }
+
+        public void ApplyDamageBuff(int extraDamage, float duration)
+        {
+            bonusDamageBuff = extraDamage;
+            bonusDamageBuffTimer = Mathf.Max(bonusDamageBuffTimer, duration);
+        }
+
+        public void ApplyRangeBuff(float bonusRangeMultiplier, float duration)
+        {
+            rangeBuffMultiplier = 1f + bonusRangeMultiplier;
+            rangeBuffTimer = Mathf.Max(rangeBuffTimer, duration);
+            UpdateSqrRange();
+            UpdateRangeVisual();
         }
 
         private void Update()
@@ -76,20 +132,49 @@ namespace DwarvesTD.Towers
             fireTimer -= Time.deltaTime;
             retargetTimer -= Time.deltaTime;
 
-            // Se no h goblins ativos no jogo, economiza 100% de CPU
+            if (attackSpeedBuffTimer > 0f)
+            {
+                attackSpeedBuffTimer -= Time.deltaTime;
+                if (attackSpeedBuffTimer <= 0f)
+                {
+                    attackSpeedBuffMultiplier = 1f;
+                }
+            }
+
+            if (bonusDamageBuffTimer > 0f)
+            {
+                bonusDamageBuffTimer -= Time.deltaTime;
+                if (bonusDamageBuffTimer <= 0f)
+                {
+                    bonusDamageBuff = 0;
+                }
+            }
+
+            if (rangeBuffTimer > 0f)
+            {
+                rangeBuffTimer -= Time.deltaTime;
+                if (rangeBuffTimer <= 0f)
+                {
+                    rangeBuffMultiplier = 1f;
+                    UpdateSqrRange();
+                    UpdateRangeVisual();
+                }
+            }
+
+            // Se não há goblins ativos no jogo, economiza 100% de CPU
             if (BaseGoblin.ActiveGoblins.Count == 0)
             {
                 currentTarget = null;
                 return;
             }
 
-            // Verifica se o alvo atual ainda  vlido
+            // Verifica se o alvo atual ainda é válido
             bool isCurrentTargetValid = currentTarget != null &&
                                        currentTarget.gameObject.activeInHierarchy &&
                                        currentTarget.CurrentHealth > 0 &&
                                        (currentTarget.transform.position - transform.position).sqrMagnitude <= sqrAttackRange;
 
-            // Recalcula o alvo apenas periodicamente ou se o atual for invlido
+            // Recalcula o alvo apenas periodicamente ou se o atual for inválido
             if (!isCurrentTargetValid || retargetTimer <= 0f)
             {
                 currentTarget = SelectTargetOptimized();
@@ -103,7 +188,8 @@ namespace DwarvesTD.Towers
                 if (fireTimer <= 0f)
                 {
                     Shoot(currentTarget);
-                    fireTimer = fireCooldown;
+                    float effectiveCooldown = fireCooldown / Mathf.Max(0.2f, attackSpeedBuffMultiplier);
+                    fireTimer = effectiveCooldown;
                 }
             }
         }
@@ -118,10 +204,10 @@ namespace DwarvesTD.Towers
             Vector3 towerPos = transform.position;
 
             var goblins = BaseGoblin.ActiveGoblins;
-            int count = goblins.Count;
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < goblins.Count; i++)
             {
+                if (i >= goblins.Count) break;
                 BaseGoblin goblin = goblins[i];
                 if (goblin == null || !goblin.gameObject.activeInHierarchy || goblin.CurrentHealth <= 0) continue;
 
@@ -213,7 +299,8 @@ namespace DwarvesTD.Towers
             BaseProjectile projectile = projObj.GetComponent<BaseProjectile>();
             if (projectile != null)
             {
-                projectile.Initialize(target, damage, projectileSpeed);
+                int effectiveDamage = Mathf.Max(1, damage + bonusDamageBuff);
+                projectile.Initialize(target, effectiveDamage, projectileSpeed);
             }
         }
 

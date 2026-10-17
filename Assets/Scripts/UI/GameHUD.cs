@@ -14,6 +14,9 @@ namespace DwarvesTD.UI
         [Header("Tower Prefabs")]
         [SerializeField] private GameObject besteiroTowerPrefab;
         [SerializeField] private GameObject cannonTowerPrefab;
+        [SerializeField] private GameObject runicTowerPrefab;
+        [SerializeField] private GameObject goldMineTowerPrefab;
+        [SerializeField] private GameObject heroPrefab;
 
         private float gameSpeed = 1f;
         private string statusMessage = "";
@@ -43,6 +46,9 @@ namespace DwarvesTD.UI
 
             if (besteiroTowerPrefab == null) besteiroTowerPrefab = Resources.Load<GameObject>("Prefabs/DwarfTower");
             if (cannonTowerPrefab == null) cannonTowerPrefab = Resources.Load<GameObject>("Prefabs/CannonTower");
+            if (runicTowerPrefab == null) runicTowerPrefab = Resources.Load<GameObject>("Prefabs/RunicTower");
+            if (goldMineTowerPrefab == null) goldMineTowerPrefab = Resources.Load<GameObject>("Prefabs/GoldMineTower");
+            if (heroPrefab == null) heroPrefab = Resources.Load<GameObject>("Prefabs/HeroThorin");
 
             if (GameManager.Instance != null)
             {
@@ -175,65 +181,126 @@ namespace DwarvesTD.UI
             GUI.enabled = true;
 
             // 2. PAINEL LATERAL DIREITO
-            float drawerW = 185f;
+            float drawerW = 200f;
             float drawerX = screenW - drawerW - 10f;
             float drawerY = 70f;
             float drawerH = screenH - 85f;
 
             GUI.Box(new Rect(drawerX, drawerY, drawerW, drawerH), "<b>OFICINA DOS ANOES</b>");
 
+            // SECAO DO HEROI COMANDANTE
+            float heroBoxY = drawerY + 22f;
+            GUI.Box(new Rect(drawerX + 5, heroBoxY, drawerW - 10, 82), "");
+
+            DwarfHero hero = DwarfHero.Instance;
+            if (hero == null)
+            {
+                bool canAffordHero = (GameManager.Instance != null && GameManager.Instance.CanAfford(150));
+                GUI.enabled = canAffordHero && state == GameState.Playing;
+                if (GUI.Button(new Rect(drawerX + 10, heroBoxY + 10, drawerW - 20, 62), "<b>Comandante Thorin</b>\n<color=#FFD700>150 Ouro (Heroi)</color>\n<size=10>Lideranca & Grito de Guerra</size>"))
+                {
+                    if (placementManager != null && heroPrefab != null) placementManager.StartPlacement(heroPrefab);
+                }
+                GUI.enabled = true;
+            }
+            else
+            {
+                GUI.Label(new Rect(drawerX + 10, heroBoxY + 4, drawerW - 20, 20), $"<b>{hero.HeroName}</b> <color=#FFD700>(Nv. {hero.CurrentLevel})</color>");
+                GUI.Label(new Rect(drawerX + 10, heroBoxY + 22, drawerW - 20, 18), $"<size=11>XP: {hero.CurrentXP} / {hero.GetRequiredXPForNextLevel()}</size>");
+
+                if (!hero.IsAbilityUnlocked)
+                {
+                    GUI.enabled = false;
+                    GUI.Button(new Rect(drawerX + 10, heroBoxY + 42, drawerW - 20, 34), "<size=11><i>Grito de Guerra (Nv. 3)</i></size>");
+                    GUI.enabled = true;
+                }
+                else if (hero.IsWarcryActive)
+                {
+                    GUI.Button(new Rect(drawerX + 10, heroBoxY + 42, drawerW - 20, 34), $"<size=11><b><color=#00FF66>GRITO ATIVO! ({hero.WarcryActiveRemaining:F1}s)</color></b></size>");
+                }
+                else if (hero.IsAbilityReady)
+                {
+                    if (GUI.Button(new Rect(drawerX + 10, heroBoxY + 42, drawerW - 20, 34), "<size=11><b><color=#FFD700>[GRITO DE GUERRA]</color></b></size>"))
+                    {
+                        hero.ActivateWarcry();
+                    }
+                }
+                else
+                {
+                    GUI.enabled = false;
+                    GUI.Button(new Rect(drawerX + 10, heroBoxY + 42, drawerW - 20, 34), $"<size=11>[Recarga: {hero.AbilityCooldownRemaining:F0}s]</size>");
+                    GUI.enabled = true;
+                }
+            }
+
+            // ABAS DAS 4 GUILDAS
+            float tabsY = heroBoxY + 88f;
             float tabW = (drawerW - 10) / 4f;
             for (int i = 0; i < categoryNames.Length; i++)
             {
                 bool isSelected = (selectedCategoryTab == i);
-                if (GUI.Toggle(new Rect(drawerX + 5 + i * tabW, drawerY + 30, tabW, 26), isSelected, categoryNames[i], "Button"))
+                if (GUI.Toggle(new Rect(drawerX + 5 + i * tabW, tabsY, tabW, 26), isSelected, categoryNames[i], "Button"))
                 {
                     selectedCategoryTab = i;
                 }
             }
 
-            float cardY = drawerY + 65;
+            float cardY = tabsY + 34f;
 
-            if (selectedCategoryTab == 0)
+            if (selectedCategoryTab == 0) // Cla Combatente
             {
                 bool canAffordBesteiro = (GameManager.Instance != null && GameManager.Instance.CanAfford(120));
                 GUI.enabled = canAffordBesteiro && state == GameState.Playing;
-                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 60), "<b>Besteiro Anao</b>\n<color=#FFD700>120 Ouro</color>"))
+                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 60), "<b>Besteiro Anao</b>\n<color=#FFD700>120 Ouro</color>\n<size=10>Tiro direto rapido</size>"))
                 {
-                    if (placementManager != null) placementManager.StartPlacement(besteiroTowerPrefab);
+                    if (placementManager != null && besteiroTowerPrefab != null) placementManager.StartPlacement(besteiroTowerPrefab);
                 }
                 GUI.enabled = true;
 
                 GUI.enabled = false;
-                GUI.Button(new Rect(drawerX + 10, cardY + 70, drawerW - 20, 50), "<b>Martelador</b>\n<i>(Em breve)</i>");
+                GUI.Button(new Rect(drawerX + 10, cardY + 68, drawerW - 20, 50), "<b>Martelador</b>\n<i>(Em breve)</i>");
                 GUI.enabled = true;
             }
-            else if (selectedCategoryTab == 1)
+            else if (selectedCategoryTab == 1) // Engenharia & Cerco
             {
                 bool canAffordCannon = (GameManager.Instance != null && GameManager.Instance.CanAfford(250));
                 GUI.enabled = canAffordCannon && state == GameState.Playing;
-                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 60), "<b>Canhoneiro</b>\n<color=#FFD700>250 Ouro</color>"))
+                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 60), "<b>Canhoneiro</b>\n<color=#FFD700>250 Ouro</color>\n<size=10>Explosao AoE / Anti-Blindado</size>"))
                 {
-                    if (placementManager != null) placementManager.StartPlacement(cannonTowerPrefab);
+                    if (placementManager != null && cannonTowerPrefab != null) placementManager.StartPlacement(cannonTowerPrefab);
                 }
                 GUI.enabled = true;
 
                 GUI.enabled = false;
-                GUI.Button(new Rect(drawerX + 10, cardY + 70, drawerW - 20, 50), "<b>Balista Sniper</b>\n<i>(Em breve)</i>");
+                GUI.Button(new Rect(drawerX + 10, cardY + 68, drawerW - 20, 50), "<b>Balista Sniper</b>\n<i>(Em breve)</i>");
                 GUI.enabled = true;
             }
-            else if (selectedCategoryTab == 2)
+            else if (selectedCategoryTab == 2) // Forja Runica & Alquimia
             {
+                bool canAffordRunic = (GameManager.Instance != null && GameManager.Instance.CanAfford(320));
+                GUI.enabled = canAffordRunic && state == GameState.Playing;
+                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 60), "<b>Ferreiro Runico</b>\n<color=#FFD700>320 Ouro</color>\n<size=10>Magia / Lentidao 45%</size>"))
+                {
+                    if (placementManager != null && runicTowerPrefab != null) placementManager.StartPlacement(runicTowerPrefab);
+                }
+                GUI.enabled = true;
+
                 GUI.enabled = false;
-                GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 50), "<b>Ferreiro Runico</b>\n<i>(Em breve)</i>");
-                GUI.Button(new Rect(drawerX + 10, cardY + 60, drawerW - 20, 50), "<b>Golem Protetor</b>\n<i>(Em breve)</i>");
+                GUI.Button(new Rect(drawerX + 10, cardY + 68, drawerW - 20, 50), "<b>Golem Protetor</b>\n<i>(Em breve)</i>");
                 GUI.enabled = true;
             }
-            else if (selectedCategoryTab == 3)
+            else if (selectedCategoryTab == 3) // Mineracao & Suporte
             {
+                bool canAffordMine = (GameManager.Instance != null && GameManager.Instance.CanAfford(400));
+                GUI.enabled = canAffordMine && state == GameState.Playing;
+                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 60), "<b>Mina de Ouro</b>\n<color=#FFD700>400 Ouro</color>\n<size=10>+80 Ouro por rodada</size>"))
+                {
+                    if (placementManager != null && goldMineTowerPrefab != null) placementManager.StartPlacement(goldMineTowerPrefab);
+                }
+                GUI.enabled = true;
+
                 GUI.enabled = false;
-                GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 50), "<b>Mina de Ouro</b>\n<i>(Em breve)</i>");
-                GUI.Button(new Rect(drawerX + 10, cardY + 60, drawerW - 20, 50), "<b>Posto de Vigia</b>\n<i>(Em breve)</i>");
+                GUI.Button(new Rect(drawerX + 10, cardY + 68, drawerW - 20, 50), "<b>Posto de Vigia</b>\n<i>(Em breve)</i>");
                 GUI.enabled = true;
             }
 

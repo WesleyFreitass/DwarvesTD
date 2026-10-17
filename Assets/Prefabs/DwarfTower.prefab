@@ -161,8 +161,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b492cc7e73cfc0345b66567b30fb7a92, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DwarvesTD.Towers.BaseDwarfTower
-  dwarfName: Besteiro Ano
+  dwarfName: Besteiro Anao
   cost: 120
+  category: 0
   attackRange: 4.5
   fireCooldown: 0.8
   damage: 1

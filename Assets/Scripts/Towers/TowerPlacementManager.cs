@@ -50,10 +50,18 @@ namespace DwarvesTD.Towers
 
             if (dwarfTowerPrefab == null) return;
 
-            BaseDwarfTower towerData = dwarfTowerPrefab.GetComponent<BaseDwarfTower>();
-            if (towerData != null && GameManager.Instance != null && !GameManager.Instance.CanAfford(towerData.Cost))
+            // Regra do Heroi: Apenas 1 heroi por partida (estilo BTD6)
+            DwarfHero heroData = dwarfTowerPrefab.GetComponent<DwarfHero>();
+            if (heroData != null && DwarfHero.Instance != null)
             {
-                Debug.LogWarning("[Placement] Ouro insuficiente para contratar este ano!");
+                Debug.LogWarning("[Placement] O Comandante Thorin ja esta liderando no campo! Limite de 1 Heroi por partida.");
+                return;
+            }
+
+            int towerCost = GetPrefabCost(dwarfTowerPrefab);
+            if (GameManager.Instance != null && !GameManager.Instance.CanAfford(towerCost))
+            {
+                Debug.LogWarning("[Placement] Ouro insuficiente para contratar!");
                 return;
             }
 
@@ -62,14 +70,28 @@ namespace DwarvesTD.Towers
             previewInstance = Instantiate(dwarfTowerPrefab);
             previewTowerScript = previewInstance.GetComponent<BaseDwarfTower>();
 
-            // Desativa a lgica de ataque do preview temporariamente
+            // Desativa a lógica de ataque/produção do preview temporariamente
             if (previewTowerScript != null)
             {
                 previewTowerScript.enabled = false;
                 previewTowerScript.ShowRangeVisual(true);
             }
 
-            // Desativa colisores do preview para no colidir com o prprio raio
+            GoldMineTower mineScript = previewInstance.GetComponent<GoldMineTower>();
+            if (mineScript != null)
+            {
+                mineScript.enabled = false;
+                mineScript.ShowRangeVisual(true);
+            }
+
+            DwarfHero heroScript = previewInstance.GetComponent<DwarfHero>();
+            if (heroScript != null)
+            {
+                heroScript.enabled = false;
+                heroScript.ShowRangeVisual(true);
+            }
+
+            // Desativa colisores do preview para não colidir com o próprio raio
             Collider[] colliders = previewInstance.GetComponentsInChildren<Collider>();
             foreach (var col in colliders)
             {
@@ -86,6 +108,7 @@ namespace DwarvesTD.Towers
                 Destroy(previewInstance);
                 previewInstance = null;
             }
+            previewTowerScript = null;
             isPlacing = false;
         }
 
@@ -97,7 +120,7 @@ namespace DwarvesTD.Towers
                 if (mainCamera == null) return;
             }
 
-            if (!isPlacing) return;
+            if (!isPlacing || previewInstance == null) return;
 
             Vector2 mouseScreenPos = GetMousePosition();
             Ray ray = mainCamera.ScreenPointToRay(mouseScreenPos);
@@ -105,7 +128,7 @@ namespace DwarvesTD.Towers
             if (Physics.Raycast(ray, out RaycastHit hit, 200f))
             {
                 Vector3 placementPos = hit.point;
-                placementPos.y = 0.5f; // Altura no cho
+                placementPos.y = 0.5f; // Altura no chão
                 previewInstance.transform.position = placementPos;
 
                 bool isValidSpot = (groundLayer.value == 0 || ((1 << hit.collider.gameObject.layer) & groundLayer.value) != 0);
@@ -126,8 +149,7 @@ namespace DwarvesTD.Towers
         {
             if (dwarfTowerPrefab == null) return;
 
-            BaseDwarfTower towerData = dwarfTowerPrefab.GetComponent<BaseDwarfTower>();
-            int cost = towerData != null ? towerData.Cost : 100;
+            int cost = GetPrefabCost(dwarfTowerPrefab);
 
             if (GameManager.Instance != null && !GameManager.Instance.SpendGold(cost))
             {
@@ -137,14 +159,44 @@ namespace DwarvesTD.Towers
             }
 
             GameObject placedTower = Instantiate(dwarfTowerPrefab, position, Quaternion.identity);
-            BaseDwarfTower script = placedTower.GetComponent<BaseDwarfTower>();
-            if (script != null)
+
+            BaseDwarfTower baseTower = placedTower.GetComponent<BaseDwarfTower>();
+            if (baseTower != null)
             {
-                script.enabled = true;
-                script.ShowRangeVisual(false);
+                baseTower.enabled = true;
+                baseTower.ShowRangeVisual(false);
+            }
+
+            GoldMineTower mineTower = placedTower.GetComponent<GoldMineTower>();
+            if (mineTower != null)
+            {
+                mineTower.enabled = true;
+                mineTower.ShowRangeVisual(false);
+            }
+
+            DwarfHero heroTower = placedTower.GetComponent<DwarfHero>();
+            if (heroTower != null)
+            {
+                heroTower.enabled = true;
+                heroTower.ShowRangeVisual(false);
             }
 
             CancelPlacement();
+        }
+
+        private int GetPrefabCost(GameObject prefab)
+        {
+            if (prefab == null) return 100;
+            BaseDwarfTower baseTower = prefab.GetComponent<BaseDwarfTower>();
+            if (baseTower != null) return baseTower.Cost;
+
+            GoldMineTower mine = prefab.GetComponent<GoldMineTower>();
+            if (mine != null) return mine.Cost;
+
+            DwarfHero hero = prefab.GetComponent<DwarfHero>();
+            if (hero != null) return hero.Cost;
+
+            return 100;
         }
 
         private Vector2 GetMousePosition()

@@ -111,3 +111,6 @@ MonoBehaviour:
   explosionRadius: 2.5
   ignoreArmor: 0
   explosionPrefab: {fileID: 0}
+  slowPercent: 0
+  slowDuration: 0
+  stunDuration: 0

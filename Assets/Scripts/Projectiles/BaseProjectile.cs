@@ -18,6 +18,11 @@ namespace DwarvesTD.Projectiles
         [SerializeField] private bool ignoreArmor = false;
         [SerializeField] private GameObject explosionPrefab;
 
+        [Header("Status Effects / Magic")]
+        [SerializeField] private float slowPercent = 0f;
+        [SerializeField] private float slowDuration = 0f;
+        [SerializeField] private float stunDuration = 0f;
+
         private BaseGoblin targetGoblin;
         private Vector3 lastTargetPos;
         private int remainingPierce;
@@ -25,7 +30,7 @@ namespace DwarvesTD.Projectiles
 
         private void Awake()
         {
-            // Garante Rigidbody kinematic para evitar que PhysX recalcule a rvore esttica a cada frame
+            // Garante Rigidbody kinematic para evitar que PhysX recalcule a árvore estática a cada frame
             Rigidbody rb = GetComponent<Rigidbody>();
             if (rb == null)
             {
@@ -55,6 +60,18 @@ namespace DwarvesTD.Projectiles
             explosionRadius = radius;
             ignoreArmor = bypassArmor;
             explosionPrefab = vfx;
+        }
+
+        public void SetSlowStats(float percent, float duration, bool bypassArmor = true)
+        {
+            slowPercent = percent;
+            slowDuration = duration;
+            ignoreArmor = bypassArmor;
+        }
+
+        public void SetStunStats(float duration)
+        {
+            stunDuration = duration;
         }
 
         private void Update()
@@ -118,10 +135,10 @@ namespace DwarvesTD.Projectiles
 
             float sqrRadius = explosionRadius * explosionRadius;
             var goblins = BaseGoblin.ActiveGoblins;
-            int count = goblins.Count;
 
-            for (int i = 0; i < count; i++)
+            for (int i = goblins.Count - 1; i >= 0; i--)
             {
+                if (i >= goblins.Count) continue;
                 BaseGoblin goblin = goblins[i];
                 if (goblin == null || !goblin.gameObject.activeInHierarchy || goblin.CurrentHealth <= 0) continue;
 
@@ -130,6 +147,14 @@ namespace DwarvesTD.Projectiles
                 if (diff.sqrMagnitude <= sqrRadius)
                 {
                     goblin.TakeDamage(damage, ignoreArmor);
+                    if (stunDuration > 0f)
+                    {
+                        goblin.ApplyStun(stunDuration);
+                    }
+                    else if (slowDuration > 0f)
+                    {
+                        goblin.ApplySlow(slowPercent, slowDuration);
+                    }
                 }
             }
 
@@ -138,7 +163,17 @@ namespace DwarvesTD.Projectiles
 
         private void HitGoblin(BaseGoblin goblin)
         {
-            goblin.TakeDamage(damage);
+            goblin.TakeDamage(damage, ignoreArmor);
+
+            if (stunDuration > 0f)
+            {
+                goblin.ApplyStun(stunDuration);
+            }
+            else if (slowDuration > 0f)
+            {
+                goblin.ApplySlow(slowPercent, slowDuration);
+            }
+
             remainingPierce--;
 
             if (remainingPierce <= 0)

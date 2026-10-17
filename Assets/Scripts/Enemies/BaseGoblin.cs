@@ -70,6 +70,10 @@ namespace DwarvesTD.Enemies
             }
         }
 
+        private float slowMultiplier = 1f;
+        private float slowTimer = 0f;
+        private float stunTimer = 0f;
+
         private void OnEnable()
         {
             if (!ActiveGoblins.Contains(this))
@@ -77,6 +81,9 @@ namespace DwarvesTD.Enemies
                 ActiveGoblins.Add(this);
             }
             flashTimer = 0f;
+            slowTimer = 0f;
+            stunTimer = 0f;
+            slowMultiplier = 1f;
             ApplyGoblinColor();
         }
 
@@ -84,6 +91,9 @@ namespace DwarvesTD.Enemies
         {
             ActiveGoblins.Remove(this);
             flashTimer = 0f;
+            slowTimer = 0f;
+            stunTimer = 0f;
+            slowMultiplier = 1f;
         }
 
         private void Update()
@@ -93,14 +103,119 @@ namespace DwarvesTD.Enemies
                 flashTimer -= Time.deltaTime;
                 if (flashTimer <= 0f)
                 {
-                    ApplyGoblinColor();
+                    ApplyCurrentVisualColor();
                 }
+            }
+
+            if (stunTimer > 0f)
+            {
+                stunTimer -= Time.deltaTime;
+                if (stunTimer <= 0f)
+                {
+                    UpdateEffectiveSpeed();
+                    ApplyCurrentVisualColor();
+                }
+            }
+            else if (slowTimer > 0f)
+            {
+                slowTimer -= Time.deltaTime;
+                if (slowTimer <= 0f)
+                {
+                    slowMultiplier = 1f;
+                    UpdateEffectiveSpeed();
+                    ApplyCurrentVisualColor();
+                }
+            }
+        }
+
+        public void ApplySlow(float slowPercent, float duration)
+        {
+            if (CurrentHealth <= 0) return;
+
+            float newMultiplier = Mathf.Clamp01(1f - slowPercent);
+            if (newMultiplier < slowMultiplier || slowTimer <= 0f)
+            {
+                slowMultiplier = newMultiplier;
+            }
+            slowTimer = Mathf.Max(slowTimer, duration);
+            UpdateEffectiveSpeed();
+            ApplyCurrentVisualColor();
+        }
+
+        public void ApplyStun(float duration)
+        {
+            if (CurrentHealth <= 0) return;
+
+            stunTimer = Mathf.Max(stunTimer, duration);
+            UpdateEffectiveSpeed();
+            ApplyCurrentVisualColor();
+        }
+
+        private void UpdateEffectiveSpeed()
+        {
+            if (Follower != null)
+            {
+                if (stunTimer > 0f)
+                {
+                    Follower.Speed = 0f;
+                }
+                else
+                {
+                    Follower.Speed = moveSpeed * slowMultiplier;
+                }
+            }
+        }
+
+        private void ApplyCurrentVisualColor()
+        {
+            if (stunTimer > 0f)
+            {
+                ApplyStunColor();
+            }
+            else if (slowTimer > 0f)
+            {
+                ApplyChilledColor();
+            }
+            else
+            {
+                ApplyGoblinColor();
+            }
+        }
+
+        public void ApplyChilledColor()
+        {
+            if (meshRenderer == null) meshRenderer = GetComponentInChildren<Renderer>();
+            if (meshRenderer != null)
+            {
+                if (propBlock == null) propBlock = new MaterialPropertyBlock();
+                Color chilledColor = Color.Lerp(goblinColor, new Color(0.15f, 0.85f, 1.0f), 0.7f);
+                meshRenderer.GetPropertyBlock(propBlock);
+                propBlock.SetColor(baseColorProp, chilledColor);
+                propBlock.SetColor(colorProp, chilledColor);
+                meshRenderer.SetPropertyBlock(propBlock);
+            }
+        }
+
+        public void ApplyStunColor()
+        {
+            if (meshRenderer == null) meshRenderer = GetComponentInChildren<Renderer>();
+            if (meshRenderer != null)
+            {
+                if (propBlock == null) propBlock = new MaterialPropertyBlock();
+                Color stunColor = Color.Lerp(goblinColor, new Color(1.0f, 0.95f, 0.25f), 0.75f);
+                meshRenderer.GetPropertyBlock(propBlock);
+                propBlock.SetColor(baseColorProp, stunColor);
+                propBlock.SetColor(colorProp, stunColor);
+                meshRenderer.SetPropertyBlock(propBlock);
             }
         }
 
         public void Initialize(PathRoute path)
         {
             CurrentHealth = maxHealth;
+            slowTimer = 0f;
+            stunTimer = 0f;
+            slowMultiplier = 1f;
 
             if (Follower == null) Follower = GetComponent<PathFollower>();
             Follower.OnReachedEnd -= HandleReachedEnd;
@@ -114,6 +229,9 @@ namespace DwarvesTD.Enemies
         public void InitializeAtPoint(PathRoute path, Vector3 spawnPosition, int waypointIndex, float distance)
         {
             CurrentHealth = maxHealth;
+            slowTimer = 0f;
+            stunTimer = 0f;
+            slowMultiplier = 1f;
 
             if (Follower == null) Follower = GetComponent<PathFollower>();
             Follower.OnReachedEnd -= HandleReachedEnd;
