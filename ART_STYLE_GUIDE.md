@@ -1,5 +1,7 @@
 # 🎨 Guia de Direção de Arte & Identidade Visual — Dwarves TD
 
+![Conceito Visual da HUD e Gameplay - Dwarves TD](Docs/HUD_Concept_Mockup.jpg)
+
 Este documento estabelece a **Bíblia de Estilo Visual Oficial** do jogo **Dwarves TD**, definindo o padrão **Stylized Cartoon 3D (Estilo Bloons TD 6)** para modelagem 3D, texturização, shaders URP e interface de usuário (HUD/UI).
 
 ---
