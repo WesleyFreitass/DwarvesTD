@@ -20,6 +20,7 @@ namespace DwarvesTD.UI
 
         [Header("UI Textures")]
         private Texture2D topBarTexture;
+        private Texture2D hudDropShadowTexture;
         private Texture2D statPillTexture;
         private Texture2D btnStartWaveTexture;
         private Texture2D btnSpeedTexture;
@@ -43,11 +44,10 @@ namespace DwarvesTD.UI
         private readonly string[] categoryNames = new string[] { "Cla", "Cerco", "Runas", "Apoio" };
 
         // Strings cacheadas para eliminar 100% das alocacoes de Garbage Collection no OnGUI
-        private string cachedLivesLabel = "<size=17><b>100</b></size>";
-        private string cachedGoldLabel = "<size=17><color=#FFD700><b>650</b></color></size>";
-        private string cachedWaveLabel = "<size=15><b><color=#381D06>ONDA 1 / 10</color></b></size>";
-        private string cachedWaveStatusLabel = "<size=10><b><color=#3E6B28>PREPARATIVOS</color></b></size>";
-        private string cachedFPSLabel = "<size=14><b><color=#00FF66>60 FPS</color></b></size>";
+        private string cachedLivesRaw = "100";
+        private string cachedGoldRaw = "650 G";
+        private string cachedWaveRaw = "Wave 1 / 10";
+        private string cachedFPSRaw = "60 FPS";
         private string cachedStatusLabel = "";
 
         // GUIStyles reutilizados (sem alocacoes por quadro)
@@ -61,6 +61,8 @@ namespace DwarvesTD.UI
         private GUIStyle playBtnStyle;
         private GUIStyle cardBtnStyle;
         private bool stylesInitialized = false;
+        private float lastScreenW = 0f;
+        private float lastScreenH = 0f;
 
         private void Start()
         {
@@ -130,6 +132,7 @@ namespace DwarvesTD.UI
         private void LoadTextures()
         {
             topBarTexture = LoadTexture("Sprites/UI/TopBar_Frame");
+            hudDropShadowTexture = LoadTexture("Sprites/UI/HUD_DropShadow");
             statPillTexture = LoadTexture("Sprites/UI/HUD_StatPill");
             btnStartWaveTexture = LoadTexture("Sprites/UI/Btn_StartWave_Glossy");
             btnSpeedTexture = LoadTexture("Sprites/UI/Btn_Speed_Teal");
@@ -146,31 +149,35 @@ namespace DwarvesTD.UI
             iconUpgrade = LoadTexture("Sprites/UI/Icon_Upgrade");
         }
 
-        private void EnsureStyles()
+        private void EnsureStyles(float uiScale)
         {
-            if (stylesInitialized) return;
+            if (stylesInitialized && Mathf.Approximately(lastScreenW, Screen.width) && Mathf.Approximately(lastScreenH, Screen.height))
+                return;
+
+            lastScreenW = Screen.width;
+            lastScreenH = Screen.height;
 
             livesStyle = new GUIStyle(GUI.skin.label)
             {
                 alignment = TextAnchor.MiddleCenter,
-                richText = true,
-                fontSize = 20,
+                richText = false,
+                fontSize = Mathf.RoundToInt(22 * uiScale),
                 fontStyle = FontStyle.Bold
             };
 
             goldStyle = new GUIStyle(GUI.skin.label)
             {
                 alignment = TextAnchor.MiddleCenter,
-                richText = true,
-                fontSize = 20,
+                richText = false,
+                fontSize = Mathf.RoundToInt(22 * uiScale),
                 fontStyle = FontStyle.Bold
             };
 
             waveTitleStyle = new GUIStyle(GUI.skin.label)
             {
                 alignment = TextAnchor.MiddleCenter,
-                richText = true,
-                fontSize = 17,
+                richText = false,
+                fontSize = Mathf.RoundToInt(20 * uiScale),
                 fontStyle = FontStyle.Bold
             };
 
@@ -178,42 +185,40 @@ namespace DwarvesTD.UI
             {
                 alignment = TextAnchor.MiddleCenter,
                 richText = true,
-                fontSize = 10,
+                fontSize = Mathf.RoundToInt(10 * uiScale),
                 fontStyle = FontStyle.Bold
             };
 
             statusStyle = new GUIStyle(GUI.skin.label)
             {
                 alignment = TextAnchor.MiddleCenter,
-                richText = true,
-                fontSize = 14,
+                richText = false,
+                fontSize = Mathf.RoundToInt(15 * uiScale),
                 fontStyle = FontStyle.Bold
             };
 
             fpsStyle = new GUIStyle(GUI.skin.label)
             {
-                alignment = TextAnchor.MiddleLeft,
-                richText = true,
-                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                richText = false,
+                fontSize = Mathf.RoundToInt(13 * uiScale),
                 fontStyle = FontStyle.Bold
             };
 
             speedBtnStyle = new GUIStyle(GUIStyle.none)
             {
                 alignment = TextAnchor.MiddleCenter,
-                richText = true,
-                fontSize = 14,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = Color.white }
+                richText = false,
+                fontSize = Mathf.RoundToInt(16 * uiScale),
+                fontStyle = FontStyle.Bold
             };
 
             playBtnStyle = new GUIStyle(GUIStyle.none)
             {
                 alignment = TextAnchor.MiddleCenter,
-                richText = true,
-                fontSize = 16,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = Color.white }
+                richText = false,
+                fontSize = Mathf.RoundToInt(18 * uiScale),
+                fontStyle = FontStyle.Bold
             };
 
             cardBtnStyle = new GUIStyle(GUI.skin.button)
@@ -226,44 +231,54 @@ namespace DwarvesTD.UI
             stylesInitialized = true;
         }
 
+        private void DrawOutlinedLabel(Rect rect, string text, GUIStyle style, Color textColor, Color outlineColor, int stroke = 2)
+        {
+            Color prevColor = GUI.color;
+            GUI.color = outlineColor;
+
+            for (int x = -stroke; x <= stroke; x += stroke)
+            {
+                for (int y = -stroke; y <= stroke; y += stroke)
+                {
+                    if (x != 0 || y != 0)
+                    {
+                        GUI.Label(new Rect(rect.x + x, rect.y + y, rect.width, rect.height), text, style);
+                    }
+                }
+            }
+
+            GUI.color = textColor;
+            GUI.Label(rect, text, style);
+            GUI.color = prevColor;
+        }
+
         private void UpdateLivesCache(int lives)
         {
-            cachedLivesLabel = $"<b>{lives}</b>";
+            cachedLivesRaw = lives.ToString();
         }
 
         private void UpdateGoldCache(int gold)
         {
-            cachedGoldLabel = $"<color=#FFD700><b>{gold} G</b></color>";
+            cachedGoldRaw = $"{gold} G";
         }
 
         private void UpdateWaveStartedCache(int wave)
         {
             int max = GameManager.Instance != null ? GameManager.Instance.MaxWaves : 10;
-            cachedWaveLabel = $"<color=#381D06><b>Wave {wave} / {max}</b></color>";
-            cachedWaveStatusLabel = "<color=#8B0000><b>EM ANDAMENTO</b></color>";
+            cachedWaveRaw = $"Wave {wave} / {max}";
         }
 
         private void UpdateWaveCompletedCache(int wave)
         {
             int max = GameManager.Instance != null ? GameManager.Instance.MaxWaves : 10;
-            cachedWaveLabel = $"<color=#381D06><b>Wave {wave} / {max}</b></color>";
-            cachedWaveStatusLabel = "<color=#2A6B28><b>VENCIDA!</b></color>";
+            cachedWaveRaw = $"Wave {wave} / {max}";
         }
 
         private void UpdateWaveWaitingState()
         {
             int current = waveSpawner != null ? waveSpawner.CurrentWave : 0;
             int max = GameManager.Instance != null ? GameManager.Instance.MaxWaves : 10;
-            if (current == 0)
-            {
-                cachedWaveLabel = $"<color=#381D06><b>Wave 1 / {max}</b></color>";
-                cachedWaveStatusLabel = "<color=#3E6B28><b>PREPARATIVOS</b></color>";
-            }
-            else
-            {
-                cachedWaveLabel = $"<color=#381D06><b>Wave {current} / {max}</b></color>";
-                cachedWaveStatusLabel = "<color=#2A6B28><b>CONCLUIDA</b></color>";
-            }
+            cachedWaveRaw = current == 0 ? $"Wave 1 / {max}" : $"Wave {current} / {max}";
         }
 
         private float fpsTimeAccumulator = 0f;
@@ -278,8 +293,7 @@ namespace DwarvesTD.UI
             if (fpsTimeAccumulator >= 0.35f)
             {
                 currentFPS = Mathf.RoundToInt(fpsFrameCount / fpsTimeAccumulator);
-                string fpsColor = currentFPS >= 55 ? "#00FF66" : (currentFPS >= 30 ? "#FFCC00" : "#FF3333");
-                cachedFPSLabel = $"<size=13><b><color={fpsColor}>{currentFPS} FPS</color></b></size>";
+                cachedFPSRaw = $"{currentFPS} FPS";
                 fpsTimeAccumulator = 0f;
                 fpsFrameCount = 0;
             }
@@ -329,21 +343,31 @@ namespace DwarvesTD.UI
 
         private void OnGUI()
         {
-            EnsureStyles();
+            float screenW = Screen.width;
+            float screenH = Screen.height;
+
+            // Fator de escala da interface (1.0 no Full HD 1920x1080)
+            float uiScale = Mathf.Clamp(screenW / 1920f, 0.65f, 1.25f);
+            EnsureStyles(uiScale);
 
             bool waveInProgress = waveSpawner != null && waveSpawner.IsWaveInProgress;
             GameState state = GameManager.Instance != null ? GameManager.Instance.CurrentState : GameState.Playing;
 
-            float screenW = Screen.width;
-            float screenH = Screen.height;
+            // 1. PAINEL LATERAL DIREITO (Oficina dos Anoes)
+            float drawerW = Mathf.Clamp(screenW * 0.22f, 240f, 400f);
+            float drawerX = screenW - drawerW;
 
-            // 1. BARRA SUPERIOR FULL HD (TopBar_Frame)
-            float uiScale = Mathf.Clamp(screenW / 1920f, 0.7f, 1.25f);
-            float barH = Mathf.Clamp(screenH * 0.082f, 72f, 92f);
-            float barW = screenW;
+            // 2. BARRA SUPERIOR (Cobre toda a extensao superior, conectando perfeitamente a Oficina dos Anoes)
             float barX = 0f;
             float barY = 0f;
+            float barW = screenW;
+            float barH = Mathf.Clamp(screenH * 0.11f, 74f, 120f);
 
+            // Gaveta Lateral direita comeca exatamente abaixo da Barra de Pedra
+            float drawerY = barH;
+            float drawerH = screenH - drawerY;
+
+            // MOLDURA DE PEDRA ESCURA SUPERIOR
             if (topBarTexture != null)
             {
                 GUI.DrawTexture(new Rect(barX, barY, barW, barH), topBarTexture, ScaleMode.StretchToFill, true);
@@ -353,75 +377,56 @@ namespace DwarvesTD.UI
                 GUI.Box(new Rect(barX, barY, barW, barH), "");
             }
 
-            // 2. CAPSULA DE VIDAS (Heart Pill)
-            float pillH = Mathf.Round(barH * 0.62f);
-            float pillY = (barH - pillH) * 0.5f;
-            float heartPillW = 155f * uiScale;
-            float heartPillX = 38f * uiScale;
+            // CAPSULA DE VIDAS & OURO COMBINADA (Design 100% Fiel a Referencia)
+            float pillH = Mathf.Round(barH * (42f / 65f));
+            float pillW = Mathf.Round(pillH * (268f / 42f));
+            float pillX = barX + Mathf.Round(16f * uiScale);
+            float pillY = barY + Mathf.Round(barH * (10f / 65f));
+
             if (statPillTexture != null)
             {
-                GUI.DrawTexture(new Rect(heartPillX, pillY, heartPillW, pillH), statPillTexture, ScaleMode.StretchToFill, true);
+                GUI.DrawTexture(new Rect(pillX, pillY, pillW, pillH), statPillTexture, ScaleMode.StretchToFill, true);
             }
 
-            // CORACAO OVERLAPADO NA ESQUERDA
-            float heartSize = Mathf.Round(pillH * 1.15f);
-            float heartY = (barH - heartSize) * 0.5f;
-            float heartX = heartPillX - (heartSize * 0.32f);
-            if (iconHeart != null)
-            {
-                GUI.DrawTexture(new Rect(heartX, heartY, heartSize, heartSize), iconHeart, ScaleMode.ScaleToFit, true);
-            }
-            // TEXTO DE VIDAS
-            float livesTextX = heartX + heartSize + 4f * uiScale;
-            float livesTextW = heartPillX + heartPillW - livesTextX - 6f * uiScale;
-            GUI.Label(new Rect(livesTextX, pillY - 1f, livesTextW, pillH + 2f), cachedLivesLabel, livesStyle);
+            // Texto de Vidas (dentro do compartimento escuro das vidas)
+            float livesTextX = pillX + (pillW * (48f / 268f));
+            float livesTextW = pillW * (74f / 268f);
+            Rect livesTextRect = new Rect(livesTextX, pillY + (pillH * 0.05f), livesTextW, pillH * 0.90f);
+            DrawOutlinedLabel(livesTextRect, cachedLivesRaw, livesStyle, Color.white, new Color(0.06f, 0.06f, 0.10f, 1f), 2);
 
-            // 3. CAPSULA DE OURO (Coin Pill)
-            float coinPillW = 165f * uiScale;
-            float coinPillX = heartPillX + heartPillW + 28f * uiScale;
-            if (statPillTexture != null)
-            {
-                GUI.DrawTexture(new Rect(coinPillX, pillY, coinPillW, pillH), statPillTexture, ScaleMode.StretchToFill, true);
-            }
+            // Texto de Ouro (dentro do compartimento escuro do ouro)
+            float goldTextX = pillX + (pillW * (178f / 268f));
+            float goldTextW = pillW * (86f / 268f);
+            Rect goldTextRect = new Rect(goldTextX, pillY + (pillH * 0.05f), goldTextW, pillH * 0.90f);
+            DrawOutlinedLabel(goldTextRect, cachedGoldRaw, goldStyle, new Color(1f, 0.82f, 0.05f, 1f), new Color(0.12f, 0.08f, 0.02f, 1f), 2);
 
-            // MOEDA DOURADA OVERLAPADA NA ESQUERDA
-            float coinSize = heartSize;
-            float coinY = heartY;
-            float coinX = coinPillX - (coinSize * 0.30f);
-            if (iconCoin != null)
-            {
-                GUI.DrawTexture(new Rect(coinX, coinY, coinSize, coinSize), iconCoin, ScaleMode.ScaleToFit, true);
-            }
-            // TEXTO DE OURO
-            float goldTextX = coinX + coinSize + 4f * uiScale;
-            float goldTextW = coinPillX + coinPillW - goldTextX - 6f * uiScale;
-            GUI.Label(new Rect(goldTextX, pillY - 1f, goldTextW, pillH + 2f), cachedGoldLabel, goldStyle);
-
-            // 4. CENTRO: PERGAMINHO DA RODADA (Banner_Scroll)
-            float scrollH = Mathf.Round(barH * 0.88f);
-            float scrollW = Mathf.Round(scrollH * 3.228f);
-            float scrollX = (screenW - scrollW) * 0.5f;
-            float scrollY = (barH - scrollH) * 0.5f;
+            // 3. PERGAMINHO CENTRAL DA RODADA (Banner_Scroll)
+            float scrollH = Mathf.Round(barH * (49f / 65f));
+            float scrollW = Mathf.Round(scrollH * (235f / 49f));
+            float scrollX = barX + (barW - scrollW) * 0.48f;
+            float scrollY = barY + Mathf.Round(barH * (4f / 65f));
 
             if (bannerScroll != null)
             {
                 GUI.DrawTexture(new Rect(scrollX, scrollY, scrollW, scrollH), bannerScroll, ScaleMode.ScaleToFit, true);
             }
 
-            GUI.Label(new Rect(scrollX + 24f * uiScale, scrollY + scrollH * 0.20f, scrollW - 48f * uiScale, scrollH * 0.60f), cachedWaveLabel, waveTitleStyle);
+            Rect waveTextRect = new Rect(scrollX + scrollW * 0.15f, scrollY + scrollH * 0.16f, scrollW * 0.70f, scrollH * 0.62f);
+            DrawOutlinedLabel(waveTextRect, cachedWaveRaw, waveTitleStyle, new Color(0.24f, 0.12f, 0.03f, 1f), new Color(0.98f, 0.92f, 0.80f, 0.9f), 1);
 
             // NOTIFICACAO DE BONUS DE RODADA
             if (!string.IsNullOrEmpty(cachedStatusLabel))
             {
-                GUI.Label(new Rect(scrollX - 60f, barH + 4f, scrollW + 120f, 26f), cachedStatusLabel, statusStyle);
+                Rect statusRect = new Rect(scrollX - 60f, barY + barH + 6f, scrollW + 120f, 26f);
+                DrawOutlinedLabel(statusRect, cachedStatusLabel, statusStyle, new Color(1f, 0.88f, 0.2f, 1f), Color.black, 2);
             }
 
-            // 5. BOTOES A DIREITA (START WAVE & VELOCIDADE)
-            // BOTAO START WAVE (Verde Glossy)
-            float playBtnW = 185f * uiScale;
-            float playBtnH = Mathf.Round(barH * 0.68f);
-            float playBtnY = (barH - playBtnH) * 0.5f;
-            float playBtnX = screenW - playBtnW - 20f * uiScale;
+            // 4. BOTOES A DIREITA (START WAVE & VELOCIDADE)
+            // BOTAO START WAVE (Verde Glossy com Rebordo Dourado)
+            float playBtnH = Mathf.Round(barH * (46f / 65f));
+            float playBtnW = Mathf.Round(playBtnH * (158f / 46f));
+            float playBtnY = barY + Mathf.Round(barH * (8f / 65f));
+            float playBtnX = barW - playBtnW - Mathf.Round(16f * uiScale);
             Rect playRect = new Rect(playBtnX, playBtnY, playBtnW, playBtnH);
 
             GUI.enabled = !waveInProgress && state == GameState.Playing;
@@ -429,18 +434,19 @@ namespace DwarvesTD.UI
             {
                 GUI.DrawTexture(playRect, btnStartWaveTexture, ScaleMode.StretchToFill, true);
             }
-            string playBtnText = waveInProgress ? "Lutando..." : ((waveSpawner != null && waveSpawner.CurrentWave == 0) ? "START WAVE" : "PROXIMA");
-            if (GUI.Button(playRect, $"<b>{playBtnText}</b>", playBtnStyle))
+            string playBtnText = waveInProgress ? "LUTANDO..." : ((waveSpawner != null && waveSpawner.CurrentWave == 0) ? "START WAVE" : "PROXIMA");
+            DrawOutlinedLabel(playRect, playBtnText, playBtnStyle, Color.white, new Color(0.06f, 0.26f, 0.02f, 1f), 2);
+            if (GUI.Button(playRect, GUIContent.none, GUIStyle.none))
             {
                 StartNextWave();
             }
             GUI.enabled = true;
 
             // BOTAO VELOCIDADE (Teal Glossy)
-            float speedBtnW = 125f * uiScale;
-            float speedBtnH = Mathf.Round(barH * 0.62f);
-            float speedBtnY = (barH - speedBtnH) * 0.5f;
-            float speedBtnX = playBtnX - speedBtnW - 14f * uiScale;
+            float speedBtnH = Mathf.Round(barH * (42f / 65f));
+            float speedBtnW = Mathf.Round(speedBtnH * (117f / 42f));
+            float speedBtnY = barY + Mathf.Round(barH * (10f / 65f));
+            float speedBtnX = playBtnX - speedBtnW - Mathf.Round(14f * uiScale);
             Rect speedRect = new Rect(speedBtnX, speedBtnY, speedBtnW, speedBtnH);
 
             if (btnSpeedTexture != null)
@@ -448,21 +454,19 @@ namespace DwarvesTD.UI
                 GUI.DrawTexture(speedRect, btnSpeedTexture, ScaleMode.StretchToFill, true);
             }
             string speedLabel = gameSpeed == 1f ? "1x Speed" : "2x Speed";
-            if (GUI.Button(speedRect, $"<b>{speedLabel}</b>", speedBtnStyle))
+            DrawOutlinedLabel(speedRect, speedLabel, speedBtnStyle, Color.white, new Color(0.02f, 0.22f, 0.18f, 1f), 2);
+            if (GUI.Button(speedRect, GUIContent.none, GUIStyle.none))
             {
                 ToggleGameSpeed();
             }
 
-            // INDICADOR DE FPS
+            // FPS COUNTER
             float fpsX = speedBtnX - 85f * uiScale;
-            GUI.Label(new Rect(fpsX, speedBtnY, 80f * uiScale, speedBtnH), cachedFPSLabel, fpsStyle);
+            Rect fpsRect = new Rect(fpsX, speedBtnY, 75f * uiScale, speedBtnH);
+            Color fpsColor = (currentFPS >= 55) ? new Color(0f, 1f, 0.4f) : ((currentFPS >= 30) ? Color.yellow : Color.red);
+            DrawOutlinedLabel(fpsRect, cachedFPSRaw, fpsStyle, fpsColor, Color.black, 1);
 
-            // 6. PAINEL LATERAL DIREITO (Oficina dos Anoes)
-            float drawerW = 210f;
-            float drawerX = screenW - drawerW - 10f;
-            float drawerY = barH + 12f;
-            float drawerH = screenH - drawerY - 10f;
-
+            // 5. PAINEL LATERAL DIREITO (Oficina dos Anoes)
             GUI.Box(new Rect(drawerX, drawerY, drawerW, drawerH), "<b>OFICINA DOS ANOES</b>");
 
             // SECAO DO HEROI COMANDANTE

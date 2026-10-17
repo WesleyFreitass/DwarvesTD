@@ -96,7 +96,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6328846270ebac4faf36745a13c61f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DwarvesTD.Pathfinding.PathFollower
-  speed: 3.5
+  speed: 2.2
   rotationSpeed: 12
 --- !u!114 &8267481117729033722
 MonoBehaviour:
