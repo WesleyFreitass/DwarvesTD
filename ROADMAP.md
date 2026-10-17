@@ -8,8 +8,8 @@ Este documento reúne o planejamento completo de desenvolvimento do jogo **Dwarv
 
 ```mermaid
 flowchart LR
-    Fase1["Fase 1: Core Loop & Economia"] --> Fase2["Fase 2: Bestiário de Goblins"]
-    Fase2 --> Fase3["Fase 3: Arsenal dos Anões"]
+    Fase1["Fase 1: Core Loop & Economia ✅"] --> Fase2["Fase 2: Bestiário de Goblins ✅"]
+    Fase2 --> Fase3["Fase 3: Arsenal dos Anões 🟡"]
     Fase3 --> Fase4["Fase 4: Sistema de Upgrades (3 Paths)"]
     Fase4 --> Fase5["Fase 5: Mapas & Terrenos"]
     Fase5 --> Fase6["Fase 6: Polimento Visual, UI & Áudio"]
@@ -24,9 +24,14 @@ flowchart LR
 | **Câmera Top-Down Fixa** | ✅ Concluído | Ângulo de 58° ortográfico/perspectiva (estilo BTD6). |
 | **Caminho & Waypoints** | ✅ Concluído | Traçado com cálculo de distância percorrida (`DistanceTraveled`). |
 | **Mira BTD6 ("First", etc.)** | ✅ Concluído | Foco no primeiro goblin do caminho com rotação suave. |
-| **Blindagem de Performance** | ✅ Concluído | Generic Object Pooling, distância ao quadrado e GPU Instancing. |
-| **Otimização Extrema de FPS** | ✅ Concluído | MaterialPropertyBlock (zero clones), Kinematic Rigidbodies (zero PhysX rebuild), eliminação de raízes quadradas no PathFollower e cache de strings na HUD. |
+| **Blindagem de Performance** | ✅ Concluído | Generic Object Pooling, distância ao quadrado e Forward rendering URP (60–120 FPS). |
+| **Otimização Extrema de FPS** | ✅ Concluído | MaterialPropertyBlock (zero clones), remoção de colisores em projéteis, eliminação de raízes quadradas no PathFollower e cache de strings na HUD. |
 | **Posicionamento de Torres** | ✅ Concluído | Sistema de compra e colocação no chão com mouse e preview de alcance. |
+| **Bestiário de Goblins (4 Tipos)** | ✅ Concluído | Recruta (Verde), Corredor (Amarelo veloz), Blindado (Cinza aço resistente) e Troll Chefe (Marrom). |
+| **Divisão no Caminho (`SplitOnDeath`)**| ✅ Concluído | Monstro pai estoura em 3 recrutas no mesmo ponto da trilha ao morrer (estilo MOAB). |
+| **Tabela Curada das 10 Rodadas** | ✅ Concluído | Progressão rítmica com escalonamento de dificuldade e recompensas até a Rodada 10. |
+| **Torre 1: Besteiro Anão** | ✅ Concluído | Clã Combatente: $120 ouro, tiro direto rápido com machados. |
+| **Torre 2: Canhoneiro de Pólvora** | ✅ Concluído | Engenharia & Cerco: $250 ouro, dano em área (AoE 2.5m), ignora blindagens. |
 
 ---
 
