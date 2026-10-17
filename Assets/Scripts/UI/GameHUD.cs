@@ -23,6 +23,7 @@ namespace DwarvesTD.UI
         private Texture2D iconHeart;
         private Texture2D iconCoin;
         private Texture2D iconScroll;
+        private Texture2D bannerScroll;
         private Texture2D iconCrown;
         private Texture2D iconAxe;
         private Texture2D iconBomb;
@@ -129,6 +130,7 @@ namespace DwarvesTD.UI
             iconHeart = LoadTexture("Sprites/UI/Icon_Heart");
             iconCoin = LoadTexture("Sprites/UI/Icon_Coin");
             iconScroll = LoadTexture("Sprites/UI/Icon_Scroll");
+            bannerScroll = LoadTexture("Sprites/UI/Banner_Scroll");
             iconCrown = LoadTexture("Sprites/UI/Icon_Crown");
             iconAxe = LoadTexture("Sprites/UI/Icon_Axe");
             iconBomb = LoadTexture("Sprites/UI/Icon_Bomb");
@@ -146,7 +148,7 @@ namespace DwarvesTD.UI
             {
                 alignment = TextAnchor.MiddleLeft,
                 richText = true,
-                fontSize = 17,
+                fontSize = 20,
                 fontStyle = FontStyle.Bold
             };
 
@@ -154,7 +156,7 @@ namespace DwarvesTD.UI
             {
                 alignment = TextAnchor.MiddleLeft,
                 richText = true,
-                fontSize = 17,
+                fontSize = 20,
                 fontStyle = FontStyle.Bold
             };
 
@@ -218,26 +220,26 @@ namespace DwarvesTD.UI
 
         private void UpdateLivesCache(int lives)
         {
-            cachedLivesLabel = $"<size=17><b>{lives}</b></size>";
+            cachedLivesLabel = $"<b>{lives}</b>";
         }
 
         private void UpdateGoldCache(int gold)
         {
-            cachedGoldLabel = $"<size=17><color=#FFD700><b>{gold}</b></color></size>";
+            cachedGoldLabel = $"<color=#FFD700><b>{gold}</b></color>";
         }
 
         private void UpdateWaveStartedCache(int wave)
         {
             int max = GameManager.Instance != null ? GameManager.Instance.MaxWaves : 10;
-            cachedWaveLabel = $"<size=15><b><color=#381D06>RODADA {wave} / {max}</color></b></size>";
-            cachedWaveStatusLabel = "<size=10><b><color=#8B0000>EM ANDAMENTO</color></b></size>";
+            cachedWaveLabel = $"<color=#381D06><b>RODADA {wave} / {max}</b></color>";
+            cachedWaveStatusLabel = "<color=#8B0000><b>EM ANDAMENTO</b></color>";
         }
 
         private void UpdateWaveCompletedCache(int wave)
         {
             int max = GameManager.Instance != null ? GameManager.Instance.MaxWaves : 10;
-            cachedWaveLabel = $"<size=15><b><color=#381D06>RODADA {wave} / {max}</color></b></size>";
-            cachedWaveStatusLabel = "<size=10><b><color=#2A6B28>VENCIDA!</color></b></size>";
+            cachedWaveLabel = $"<color=#381D06><b>RODADA {wave} / {max}</b></color>";
+            cachedWaveStatusLabel = "<color=#2A6B28><b>VENCIDA!</b></color>";
         }
 
         private void UpdateWaveWaitingState()
@@ -246,13 +248,13 @@ namespace DwarvesTD.UI
             int max = GameManager.Instance != null ? GameManager.Instance.MaxWaves : 10;
             if (current == 0)
             {
-                cachedWaveLabel = $"<size=15><b><color=#381D06>RODADA 1 / {max}</color></b></size>";
-                cachedWaveStatusLabel = "<size=10><b><color=#3E6B28>PREPARATIVOS</color></b></size>";
+                cachedWaveLabel = $"<color=#381D06><b>RODADA 1 / {max}</b></color>";
+                cachedWaveStatusLabel = "<color=#3E6B28><b>PREPARATIVOS</b></color>";
             }
             else
             {
-                cachedWaveLabel = $"<size=15><b><color=#381D06>RODADA {current} / {max}</color></b></size>";
-                cachedWaveStatusLabel = "<size=10><b><color=#2A6B28>CONCLUIDA</color></b></size>";
+                cachedWaveLabel = $"<color=#381D06><b>RODADA {current} / {max}</b></color>";
+                cachedWaveStatusLabel = "<color=#2A6B28><b>CONCLUIDA</b></color>";
             }
         }
 
@@ -327,14 +329,12 @@ namespace DwarvesTD.UI
             float screenW = Screen.width;
             float screenH = Screen.height;
 
-            // 1. BARRA SUPERIOR CUSTOMIZADA (TopBar_Frame)
-            float drawerW = 210f;
-            float availableW = screenW - drawerW - 30f;
-            float barW = Mathf.Clamp(availableW, 640f, 1024f);
-            float barH = barW * (125f / 1024f);
-            float barX = 15f;
-            float barY = 8f;
-            float s = barW / 1024f; // Escala proporcional baseada na largura da frame
+            // 1. BARRA SUPERIOR FULL HD (TopBar_Frame - Opcao 2)
+            float uiScale = Mathf.Clamp(screenW / 1920f, 0.7f, 1.25f);
+            float barH = Mathf.Clamp(screenH * 0.082f, 70f, 92f);
+            float barW = screenW;
+            float barX = 0f;
+            float barY = 0f;
 
             if (topBarTexture != null)
             {
@@ -346,44 +346,56 @@ namespace DwarvesTD.UI
             }
 
             // SLOT 1: VIDAS (Coracao + Quantidade)
-            float iconSize = 34f * s;
-            float slotY = barY + (barH * 0.5f) - (iconSize * 0.5f);
+            float iconSize = Mathf.Round(barH * 0.72f);
+            float slotY = (barH - iconSize) * 0.5f;
+            float heartX = 24f * uiScale;
             if (iconHeart != null)
             {
-                GUI.DrawTexture(new Rect(barX + 34f * s, slotY, iconSize, iconSize), iconHeart, ScaleMode.ScaleToFit, true);
+                GUI.DrawTexture(new Rect(heartX, slotY, iconSize, iconSize), iconHeart, ScaleMode.ScaleToFit, true);
             }
-            GUI.Label(new Rect(barX + 72f * s, slotY - 2f * s, 85f * s, iconSize + 4f * s), cachedLivesLabel, livesStyle);
+            float livesTextX = heartX + iconSize + 10f * uiScale;
+            float livesTextW = 80f * uiScale;
+            GUI.Label(new Rect(livesTextX, slotY - 1f, livesTextW, iconSize + 2f), cachedLivesLabel, livesStyle);
 
             // SLOT 2: OURO (Moeda + Quantidade)
+            float coinX = livesTextX + livesTextW + 16f * uiScale;
             if (iconCoin != null)
             {
-                GUI.DrawTexture(new Rect(barX + 196f * s, slotY, iconSize, iconSize), iconCoin, ScaleMode.ScaleToFit, true);
+                GUI.DrawTexture(new Rect(coinX, slotY, iconSize, iconSize), iconCoin, ScaleMode.ScaleToFit, true);
             }
-            GUI.Label(new Rect(barX + 236f * s, slotY - 2f * s, 92f * s, iconSize + 4f * s), cachedGoldLabel, goldStyle);
+            float goldTextX = coinX + iconSize + 10f * uiScale;
+            float goldTextW = 100f * uiScale;
+            GUI.Label(new Rect(goldTextX, slotY - 1f, goldTextW, iconSize + 2f), cachedGoldLabel, goldStyle);
 
-            // CENTRO: PERGAMINHO DA RODADA
-            float scrollCenterX = barX + 512f * s;
-            float scrollW = 200f * s;
-            float scrollX = scrollCenterX - (scrollW * 0.5f);
-            GUI.Label(new Rect(scrollX, barY + 36f * s, scrollW, 26f * s), cachedWaveLabel, waveTitleStyle);
-            GUI.Label(new Rect(scrollX, barY + 62f * s, scrollW, 18f * s), cachedWaveStatusLabel, waveSubStyle);
+            // CENTRO: PERGAMINHO DA RODADA (Banner_Scroll)
+            float scrollH = Mathf.Round(barH * 0.84f);
+            float scrollW = Mathf.Round(scrollH * 3.228f);
+            float scrollX = (screenW - scrollW) * 0.5f;
+            float scrollY = (barH - scrollH) * 0.5f;
+
+            if (bannerScroll != null)
+            {
+                GUI.DrawTexture(new Rect(scrollX, scrollY, scrollW, scrollH), bannerScroll, ScaleMode.ScaleToFit, true);
+            }
+
+            GUI.Label(new Rect(scrollX + 26f * uiScale, scrollY + scrollH * 0.16f, scrollW - 52f * uiScale, scrollH * 0.44f), cachedWaveLabel, waveTitleStyle);
+            GUI.Label(new Rect(scrollX + 26f * uiScale, scrollY + scrollH * 0.56f, scrollW - 52f * uiScale, scrollH * 0.34f), cachedWaveStatusLabel, waveSubStyle);
 
             // NOTIFICACAO DE BONUS DE RODADA
             if (!string.IsNullOrEmpty(cachedStatusLabel))
             {
-                GUI.Label(new Rect(scrollX - 50f * s, barY + barH + 4f, scrollW + 100f * s, 26f), cachedStatusLabel, statusStyle);
+                GUI.Label(new Rect(scrollX - 60f, barH + 4f, scrollW + 120f, 26f), cachedStatusLabel, statusStyle);
             }
 
-            // SLOT 3: VELOCIDADE (1x / 2x)
-            Rect speedRect = new Rect(barX + 734f * s, barY + 38f * s, 96f * s, 46f * s);
-            string speedLabel = gameSpeed == 1f ? "<b>1x</b>" : "<color=#00FF66><b>2x >></b></color>";
-            if (GUI.Button(speedRect, speedLabel, speedBtnStyle))
-            {
-                ToggleGameSpeed();
-            }
+            // CONTROLES A DIREITA
+            float btnH = Mathf.Round(barH * 0.58f);
+            float btnY = (barH - btnH) * 0.5f;
 
-            // SLOT 4: INICIAR / PROXIMA RODADA
-            Rect playRect = new Rect(barX + 862f * s, barY + 38f * s, 134f * s, 46f * s);
+            // BOTAO INICIAR / PROXIMA RODADA
+            float playBtnW = 145f * uiScale;
+            float playBtnX = screenW - playBtnW - 20f * uiScale;
+            Rect playRect = new Rect(playBtnX, btnY, playBtnW, btnH);
+
             GUI.enabled = !waveInProgress && state == GameState.Playing;
             string playBtnText;
             if (waveInProgress)
@@ -405,13 +417,26 @@ namespace DwarvesTD.UI
             }
             GUI.enabled = true;
 
+            // BOTAO VELOCIDADE (1x / 2x)
+            float speedBtnW = 95f * uiScale;
+            float speedBtnX = playBtnX - speedBtnW - 12f * uiScale;
+            Rect speedRect = new Rect(speedBtnX, btnY, speedBtnW, btnH);
+
+            string speedLabel = gameSpeed == 1f ? "<b>1x</b>" : "<color=#00FF66><b>2x >></b></color>";
+            if (GUI.Button(speedRect, speedLabel, speedBtnStyle))
+            {
+                ToggleGameSpeed();
+            }
+
             // INDICADOR DE FPS
-            GUI.Label(new Rect(barX + barW + 12f, barY + 12f, 90f, 24f), cachedFPSLabel, fpsStyle);
+            float fpsX = speedBtnX - 85f * uiScale;
+            GUI.Label(new Rect(fpsX, btnY, 80f * uiScale, btnH), cachedFPSLabel, fpsStyle);
 
             // 2. PAINEL LATERAL DIREITO (Oficina dos Anoes)
+            float drawerW = 210f;
             float drawerX = screenW - drawerW - 10f;
-            float drawerY = 10f;
-            float drawerH = screenH - 20f;
+            float drawerY = barH + 12f;
+            float drawerH = screenH - drawerY - 10f;
 
             GUI.Box(new Rect(drawerX, drawerY, drawerW, drawerH), "<b>OFICINA DOS ANOES</b>");
 
