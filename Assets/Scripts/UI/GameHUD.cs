@@ -18,6 +18,19 @@ namespace DwarvesTD.UI
         [SerializeField] private GameObject goldMineTowerPrefab;
         [SerializeField] private GameObject heroPrefab;
 
+        [Header("UI Textures")]
+        private Texture2D topBarTexture;
+        private Texture2D iconHeart;
+        private Texture2D iconCoin;
+        private Texture2D iconScroll;
+        private Texture2D iconCrown;
+        private Texture2D iconAxe;
+        private Texture2D iconBomb;
+        private Texture2D iconHammer;
+        private Texture2D iconGoldChest;
+        private Texture2D iconTarget;
+        private Texture2D iconUpgrade;
+
         private float gameSpeed = 1f;
         private string statusMessage = "";
         private float statusTimer = 0f;
@@ -26,11 +39,24 @@ namespace DwarvesTD.UI
         private readonly string[] categoryNames = new string[] { "Cla", "Cerco", "Runas", "Apoio" };
 
         // Strings cacheadas para eliminar 100% das alocacoes de Garbage Collection no OnGUI
-        private string cachedLivesLabel = "<size=18><b>Vidas: 100</b></size>";
-        private string cachedGoldLabel = "<size=18><color=#FFD700><b>Ouro: 650 G</b></color></size>";
-        private string cachedWaveLabel = "<size=16>Aguardando Inicio</size>";
-        private string cachedFPSLabel = "<size=16><b><color=#00FF66>60 FPS</color></b></size>";
+        private string cachedLivesLabel = "<size=17><b>100</b></size>";
+        private string cachedGoldLabel = "<size=17><color=#FFD700><b>650</b></color></size>";
+        private string cachedWaveLabel = "<size=15><b><color=#381D06>ONDA 1 / 10</color></b></size>";
+        private string cachedWaveStatusLabel = "<size=10><b><color=#3E6B28>PREPARATIVOS</color></b></size>";
+        private string cachedFPSLabel = "<size=14><b><color=#00FF66>60 FPS</color></b></size>";
         private string cachedStatusLabel = "";
+
+        // GUIStyles reutilizados (sem alocacoes por quadro)
+        private GUIStyle livesStyle;
+        private GUIStyle goldStyle;
+        private GUIStyle waveTitleStyle;
+        private GUIStyle waveSubStyle;
+        private GUIStyle statusStyle;
+        private GUIStyle fpsStyle;
+        private GUIStyle speedBtnStyle;
+        private GUIStyle playBtnStyle;
+        private GUIStyle cardBtnStyle;
+        private bool stylesInitialized = false;
 
         private void Start()
         {
@@ -50,6 +76,8 @@ namespace DwarvesTD.UI
             if (goldMineTowerPrefab == null) goldMineTowerPrefab = Resources.Load<GameObject>("Prefabs/GoldMineTower");
             if (heroPrefab == null) heroPrefab = Resources.Load<GameObject>("Prefabs/HeroThorin");
 
+            LoadTextures();
+
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.OnLivesChanged += UpdateLivesCache;
@@ -62,24 +90,170 @@ namespace DwarvesTD.UI
 
             if (waveSpawner != null)
             {
-                waveSpawner.OnWaveStarted += UpdateWaveCache;
+                waveSpawner.OnWaveStarted += UpdateWaveStartedCache;
+                waveSpawner.OnWaveCompleted += UpdateWaveCompletedCache;
+                UpdateWaveWaitingState();
             }
+        }
+
+        private void OnDestroy()
+        {
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.OnLivesChanged -= UpdateLivesCache;
+                GameManager.Instance.OnGoldChanged -= UpdateGoldCache;
+                GameManager.Instance.OnRoundRewardGranted -= HandleRoundReward;
+            }
+
+            if (waveSpawner != null)
+            {
+                waveSpawner.OnWaveStarted -= UpdateWaveStartedCache;
+                waveSpawner.OnWaveCompleted -= UpdateWaveCompletedCache;
+            }
+        }
+
+        private Texture2D LoadTexture(string path)
+        {
+            Texture2D tex = Resources.Load<Texture2D>(path);
+            if (tex == null)
+            {
+                Sprite spr = Resources.Load<Sprite>(path);
+                if (spr != null) tex = spr.texture;
+            }
+            return tex;
+        }
+
+        private void LoadTextures()
+        {
+            topBarTexture = LoadTexture("Sprites/UI/TopBar_Frame");
+            iconHeart = LoadTexture("Sprites/UI/Icon_Heart");
+            iconCoin = LoadTexture("Sprites/UI/Icon_Coin");
+            iconScroll = LoadTexture("Sprites/UI/Icon_Scroll");
+            iconCrown = LoadTexture("Sprites/UI/Icon_Crown");
+            iconAxe = LoadTexture("Sprites/UI/Icon_Axe");
+            iconBomb = LoadTexture("Sprites/UI/Icon_Bomb");
+            iconHammer = LoadTexture("Sprites/UI/Icon_Hammer");
+            iconGoldChest = LoadTexture("Sprites/UI/Icon_GoldChest");
+            iconTarget = LoadTexture("Sprites/UI/Icon_Target");
+            iconUpgrade = LoadTexture("Sprites/UI/Icon_Upgrade");
+        }
+
+        private void EnsureStyles()
+        {
+            if (stylesInitialized) return;
+
+            livesStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                richText = true,
+                fontSize = 17,
+                fontStyle = FontStyle.Bold
+            };
+
+            goldStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                richText = true,
+                fontSize = 17,
+                fontStyle = FontStyle.Bold
+            };
+
+            waveTitleStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                richText = true,
+                fontSize = 15,
+                fontStyle = FontStyle.Bold
+            };
+
+            waveSubStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                richText = true,
+                fontSize = 10,
+                fontStyle = FontStyle.Bold
+            };
+
+            statusStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                richText = true,
+                fontSize = 14,
+                fontStyle = FontStyle.Bold
+            };
+
+            fpsStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                richText = true,
+                fontSize = 13,
+                fontStyle = FontStyle.Bold
+            };
+
+            speedBtnStyle = new GUIStyle(GUI.skin.button)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                richText = true,
+                fontSize = 14,
+                fontStyle = FontStyle.Bold
+            };
+
+            playBtnStyle = new GUIStyle(GUI.skin.button)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                richText = true,
+                fontSize = 14,
+                fontStyle = FontStyle.Bold
+            };
+
+            cardBtnStyle = new GUIStyle(GUI.skin.button)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                richText = true,
+                padding = new RectOffset(52, 6, 4, 4)
+            };
+
+            stylesInitialized = true;
         }
 
         private void UpdateLivesCache(int lives)
         {
-            cachedLivesLabel = $"<size=18><b>Vidas: {lives}</b></size>";
+            cachedLivesLabel = $"<size=17><b>{lives}</b></size>";
         }
 
         private void UpdateGoldCache(int gold)
         {
-            cachedGoldLabel = $"<size=18><color=#FFD700><b>Ouro: {gold} G</b></color></size>";
+            cachedGoldLabel = $"<size=17><color=#FFD700><b>{gold}</b></color></size>";
         }
 
-        private void UpdateWaveCache(int wave)
+        private void UpdateWaveStartedCache(int wave)
         {
             int max = GameManager.Instance != null ? GameManager.Instance.MaxWaves : 10;
-            cachedWaveLabel = $"<size=16>Rodada: <b>{wave} / {max}</b></size>";
+            cachedWaveLabel = $"<size=15><b><color=#381D06>RODADA {wave} / {max}</color></b></size>";
+            cachedWaveStatusLabel = "<size=10><b><color=#8B0000>EM ANDAMENTO</color></b></size>";
+        }
+
+        private void UpdateWaveCompletedCache(int wave)
+        {
+            int max = GameManager.Instance != null ? GameManager.Instance.MaxWaves : 10;
+            cachedWaveLabel = $"<size=15><b><color=#381D06>RODADA {wave} / {max}</color></b></size>";
+            cachedWaveStatusLabel = "<size=10><b><color=#2A6B28>VENCIDA!</color></b></size>";
+        }
+
+        private void UpdateWaveWaitingState()
+        {
+            int current = waveSpawner != null ? waveSpawner.CurrentWave : 0;
+            int max = GameManager.Instance != null ? GameManager.Instance.MaxWaves : 10;
+            if (current == 0)
+            {
+                cachedWaveLabel = $"<size=15><b><color=#381D06>RODADA 1 / {max}</color></b></size>";
+                cachedWaveStatusLabel = "<size=10><b><color=#3E6B28>PREPARATIVOS</color></b></size>";
+            }
+            else
+            {
+                cachedWaveLabel = $"<size=15><b><color=#381D06>RODADA {current} / {max}</color></b></size>";
+                cachedWaveStatusLabel = "<size=10><b><color=#2A6B28>CONCLUIDA</color></b></size>";
+            }
         }
 
         private float fpsTimeAccumulator = 0f;
@@ -95,7 +269,7 @@ namespace DwarvesTD.UI
             {
                 currentFPS = Mathf.RoundToInt(fpsFrameCount / fpsTimeAccumulator);
                 string fpsColor = currentFPS >= 55 ? "#00FF66" : (currentFPS >= 30 ? "#FFCC00" : "#FF3333");
-                cachedFPSLabel = $"<size=16><b><color={fpsColor}>{currentFPS} FPS</color></b></size>";
+                cachedFPSLabel = $"<size=13><b><color={fpsColor}>{currentFPS} FPS</color></b></size>";
                 fpsTimeAccumulator = 0f;
                 fpsFrameCount = 0;
             }
@@ -114,8 +288,9 @@ namespace DwarvesTD.UI
         private void HandleRoundReward(int round, int bonus)
         {
             statusMessage = $"+ {bonus} Ouro bonus da Rodada {round}!";
-            cachedStatusLabel = $"<size=15><b><color=#FFD700>+ {bonus} Ouro bonus da Rodada {round}!</color></b></size>";
+            cachedStatusLabel = $"<size=14><b><color=#FFD700>+ {bonus} Ouro da Rodada {round}!</color></b></size>";
             statusTimer = 3.5f;
+            UpdateWaveWaitingState();
         }
 
         public void StartNextWave()
@@ -144,83 +319,143 @@ namespace DwarvesTD.UI
 
         private void OnGUI()
         {
+            EnsureStyles();
+
             bool waveInProgress = waveSpawner != null && waveSpawner.IsWaveInProgress;
             GameState state = GameManager.Instance != null ? GameManager.Instance.CurrentState : GameState.Playing;
 
             float screenW = Screen.width;
             float screenH = Screen.height;
 
-            // 1. BARRA SUPERIOR
-            float topBarHeight = 52f;
-            GUI.Box(new Rect(10, 10, screenW - 200, topBarHeight), "");
+            // 1. BARRA SUPERIOR CUSTOMIZADA (TopBar_Frame)
+            float drawerW = 210f;
+            float availableW = screenW - drawerW - 30f;
+            float barW = Mathf.Clamp(availableW, 640f, 1024f);
+            float barH = barW * (125f / 1024f);
+            float barX = 15f;
+            float barY = 8f;
+            float s = barW / 1024f; // Escala proporcional baseada na largura da frame
 
-            GUI.Label(new Rect(25, 16, 140, 35), cachedLivesLabel);
-            GUI.Label(new Rect(165, 16, 170, 35), cachedGoldLabel);
-            GUI.Label(new Rect(340, 16, 220, 35), cachedWaveLabel);
-
-            if (!string.IsNullOrEmpty(cachedStatusLabel))
+            if (topBarTexture != null)
             {
-                GUI.Label(new Rect(560, 16, 300, 35), cachedStatusLabel);
+                GUI.DrawTexture(new Rect(barX, barY, barW, barH), topBarTexture, ScaleMode.StretchToFill, true);
+            }
+            else
+            {
+                GUI.Box(new Rect(barX, barY, barW, barH), "");
             }
 
-            float controlX = screenW - 390;
+            // SLOT 1: VIDAS (Coracao + Quantidade)
+            float iconSize = 34f * s;
+            float slotY = barY + (barH * 0.5f) - (iconSize * 0.5f);
+            if (iconHeart != null)
+            {
+                GUI.DrawTexture(new Rect(barX + 34f * s, slotY, iconSize, iconSize), iconHeart, ScaleMode.ScaleToFit, true);
+            }
+            GUI.Label(new Rect(barX + 72f * s, slotY - 2f * s, 85f * s, iconSize + 4f * s), cachedLivesLabel, livesStyle);
 
-            GUI.Label(new Rect(controlX - 110, 18, 105, 35), cachedFPSLabel);
+            // SLOT 2: OURO (Moeda + Quantidade)
+            if (iconCoin != null)
+            {
+                GUI.DrawTexture(new Rect(barX + 196f * s, slotY, iconSize, iconSize), iconCoin, ScaleMode.ScaleToFit, true);
+            }
+            GUI.Label(new Rect(barX + 236f * s, slotY - 2f * s, 92f * s, iconSize + 4f * s), cachedGoldLabel, goldStyle);
 
-            if (GUI.Button(new Rect(controlX, 15, 90, 42), $"Vel: {gameSpeed}x"))
+            // CENTRO: PERGAMINHO DA RODADA
+            float scrollCenterX = barX + 512f * s;
+            float scrollW = 200f * s;
+            float scrollX = scrollCenterX - (scrollW * 0.5f);
+            GUI.Label(new Rect(scrollX, barY + 36f * s, scrollW, 26f * s), cachedWaveLabel, waveTitleStyle);
+            GUI.Label(new Rect(scrollX, barY + 62f * s, scrollW, 18f * s), cachedWaveStatusLabel, waveSubStyle);
+
+            // NOTIFICACAO DE BONUS DE RODADA
+            if (!string.IsNullOrEmpty(cachedStatusLabel))
+            {
+                GUI.Label(new Rect(scrollX - 50f * s, barY + barH + 4f, scrollW + 100f * s, 26f), cachedStatusLabel, statusStyle);
+            }
+
+            // SLOT 3: VELOCIDADE (1x / 2x)
+            Rect speedRect = new Rect(barX + 734f * s, barY + 38f * s, 96f * s, 46f * s);
+            string speedLabel = gameSpeed == 1f ? "<b>1x</b>" : "<color=#00FF66><b>2x >></b></color>";
+            if (GUI.Button(speedRect, speedLabel, speedBtnStyle))
             {
                 ToggleGameSpeed();
             }
 
+            // SLOT 4: INICIAR / PROXIMA RODADA
+            Rect playRect = new Rect(barX + 862f * s, barY + 38f * s, 134f * s, 46f * s);
             GUI.enabled = !waveInProgress && state == GameState.Playing;
-            string playBtnText = (waveSpawner != null && waveSpawner.CurrentWave == 0) ? "Iniciar" : (waveInProgress ? "Lutando..." : "Proxima");
-            if (GUI.Button(new Rect(controlX + 95, 15, 90, 42), $"<b>{playBtnText}</b>"))
+            string playBtnText;
+            if (waveInProgress)
+            {
+                playBtnText = "<color=#CCCCCC>Lutando...</color>";
+            }
+            else if (waveSpawner != null && waveSpawner.CurrentWave == 0)
+            {
+                playBtnText = "<color=#00FF66><b>Iniciar!</b></color>";
+            }
+            else
+            {
+                playBtnText = "<color=#FFD700><b>Proxima >></b></color>";
+            }
+
+            if (GUI.Button(playRect, playBtnText, playBtnStyle))
             {
                 StartNextWave();
             }
             GUI.enabled = true;
 
-            // 2. PAINEL LATERAL DIREITO
-            float drawerW = 200f;
+            // INDICADOR DE FPS
+            GUI.Label(new Rect(barX + barW + 12f, barY + 12f, 90f, 24f), cachedFPSLabel, fpsStyle);
+
+            // 2. PAINEL LATERAL DIREITO (Oficina dos Anoes)
             float drawerX = screenW - drawerW - 10f;
-            float drawerY = 70f;
-            float drawerH = screenH - 85f;
+            float drawerY = 10f;
+            float drawerH = screenH - 20f;
 
             GUI.Box(new Rect(drawerX, drawerY, drawerW, drawerH), "<b>OFICINA DOS ANOES</b>");
 
             // SECAO DO HEROI COMANDANTE
-            float heroBoxY = drawerY + 22f;
-            GUI.Box(new Rect(drawerX + 5, heroBoxY, drawerW - 10, 82), "");
+            float heroBoxY = drawerY + 28f;
+            GUI.Box(new Rect(drawerX + 6, heroBoxY, drawerW - 12, 88), "");
 
             DwarfHero hero = DwarfHero.Instance;
             if (hero == null)
             {
                 bool canAffordHero = (GameManager.Instance != null && GameManager.Instance.CanAfford(150));
                 GUI.enabled = canAffordHero && state == GameState.Playing;
-                if (GUI.Button(new Rect(drawerX + 10, heroBoxY + 10, drawerW - 20, 62), "<b>Comandante Thorin</b>\n<color=#FFD700>150 Ouro (Heroi)</color>\n<size=10>Lideranca & Grito de Guerra</size>"))
+                if (GUI.Button(new Rect(drawerX + 10, heroBoxY + 8, drawerW - 20, 72), "        <b>Comandante Thorin</b>\n        <color=#FFD700>150 Ouro (Heroi)</color>\n        <size=10>Lideranca & Warcry</size>"))
                 {
                     if (placementManager != null && heroPrefab != null) placementManager.StartPlacement(heroPrefab);
+                }
+                if (iconCrown != null)
+                {
+                    GUI.DrawTexture(new Rect(drawerX + 14, heroBoxY + 20, 32, 32), iconCrown, ScaleMode.ScaleToFit, true);
                 }
                 GUI.enabled = true;
             }
             else
             {
-                GUI.Label(new Rect(drawerX + 10, heroBoxY + 4, drawerW - 20, 20), $"<b>{hero.HeroName}</b> <color=#FFD700>(Nv. {hero.CurrentLevel})</color>");
-                GUI.Label(new Rect(drawerX + 10, heroBoxY + 22, drawerW - 20, 18), $"<size=11>XP: {hero.CurrentXP} / {hero.GetRequiredXPForNextLevel()}</size>");
+                if (iconCrown != null)
+                {
+                    GUI.DrawTexture(new Rect(drawerX + 10, heroBoxY + 6, 24, 24), iconCrown, ScaleMode.ScaleToFit, true);
+                }
+                GUI.Label(new Rect(drawerX + 38, heroBoxY + 4, drawerW - 46, 20), $"<b>{hero.HeroName}</b> <color=#FFD700>(Nv. {hero.CurrentLevel})</color>");
+                GUI.Label(new Rect(drawerX + 38, heroBoxY + 22, drawerW - 46, 18), $"<size=11>XP: {hero.CurrentXP} / {hero.GetRequiredXPForNextLevel()}</size>");
 
                 if (!hero.IsAbilityUnlocked)
                 {
                     GUI.enabled = false;
-                    GUI.Button(new Rect(drawerX + 10, heroBoxY + 42, drawerW - 20, 34), "<size=11><i>Grito de Guerra (Nv. 3)</i></size>");
+                    GUI.Button(new Rect(drawerX + 10, heroBoxY + 44, drawerW - 20, 36), "<size=11><i>Grito de Guerra (Nv. 3)</i></size>");
                     GUI.enabled = true;
                 }
                 else if (hero.IsWarcryActive)
                 {
-                    GUI.Button(new Rect(drawerX + 10, heroBoxY + 42, drawerW - 20, 34), $"<size=11><b><color=#00FF66>GRITO ATIVO! ({hero.WarcryActiveRemaining:F1}s)</color></b></size>");
+                    GUI.Button(new Rect(drawerX + 10, heroBoxY + 44, drawerW - 20, 36), $"<size=11><b><color=#00FF66>GRITO ATIVO! ({hero.WarcryActiveRemaining:F1}s)</color></b></size>");
                 }
                 else if (hero.IsAbilityReady)
                 {
-                    if (GUI.Button(new Rect(drawerX + 10, heroBoxY + 42, drawerW - 20, 34), "<size=11><b><color=#FFD700>[GRITO DE GUERRA]</color></b></size>"))
+                    if (GUI.Button(new Rect(drawerX + 10, heroBoxY + 44, drawerW - 20, 36), "<size=11><b><color=#FFD700>[GRITO DE GUERRA]</color></b></size>"))
                     {
                         hero.ActivateWarcry();
                     }
@@ -228,18 +463,18 @@ namespace DwarvesTD.UI
                 else
                 {
                     GUI.enabled = false;
-                    GUI.Button(new Rect(drawerX + 10, heroBoxY + 42, drawerW - 20, 34), $"<size=11>[Recarga: {hero.AbilityCooldownRemaining:F0}s]</size>");
+                    GUI.Button(new Rect(drawerX + 10, heroBoxY + 44, drawerW - 20, 36), $"<size=11>[Recarga: {hero.AbilityCooldownRemaining:F0}s]</size>");
                     GUI.enabled = true;
                 }
             }
 
             // ABAS DAS 4 GUILDAS
-            float tabsY = heroBoxY + 88f;
-            float tabW = (drawerW - 10) / 4f;
+            float tabsY = heroBoxY + 94f;
+            float tabW = (drawerW - 12f) / 4f;
             for (int i = 0; i < categoryNames.Length; i++)
             {
                 bool isSelected = (selectedCategoryTab == i);
-                if (GUI.Toggle(new Rect(drawerX + 5 + i * tabW, tabsY, tabW, 26), isSelected, categoryNames[i], "Button"))
+                if (GUI.Toggle(new Rect(drawerX + 6 + i * tabW, tabsY, tabW, 26), isSelected, categoryNames[i], "Button"))
                 {
                     selectedCategoryTab = i;
                 }
@@ -251,62 +486,78 @@ namespace DwarvesTD.UI
             {
                 bool canAffordBesteiro = (GameManager.Instance != null && GameManager.Instance.CanAfford(120));
                 GUI.enabled = canAffordBesteiro && state == GameState.Playing;
-                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 60), "<b>Besteiro Anao</b>\n<color=#FFD700>120 Ouro</color>\n<size=10>Tiro direto rapido</size>"))
+                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 64), "<b>Besteiro Anao</b>\n<color=#FFD700>120 Ouro</color>\n<size=10>Tiro direto rapido</size>", cardBtnStyle))
                 {
                     if (placementManager != null && besteiroTowerPrefab != null) placementManager.StartPlacement(besteiroTowerPrefab);
+                }
+                if (iconAxe != null)
+                {
+                    GUI.DrawTexture(new Rect(drawerX + 14, cardY + 12, 36, 36), iconAxe, ScaleMode.ScaleToFit, true);
                 }
                 GUI.enabled = true;
 
                 GUI.enabled = false;
-                GUI.Button(new Rect(drawerX + 10, cardY + 68, drawerW - 20, 50), "<b>Martelador</b>\n<i>(Em breve)</i>");
+                GUI.Button(new Rect(drawerX + 10, cardY + 72, drawerW - 20, 52), "<b>Martelador</b>\n<i>(Em breve)</i>");
                 GUI.enabled = true;
             }
             else if (selectedCategoryTab == 1) // Engenharia & Cerco
             {
                 bool canAffordCannon = (GameManager.Instance != null && GameManager.Instance.CanAfford(250));
                 GUI.enabled = canAffordCannon && state == GameState.Playing;
-                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 60), "<b>Canhoneiro</b>\n<color=#FFD700>250 Ouro</color>\n<size=10>Explosao AoE / Anti-Blindado</size>"))
+                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 64), "<b>Canhoneiro</b>\n<color=#FFD700>250 Ouro</color>\n<size=10>Explosao AoE / Blindado</size>", cardBtnStyle))
                 {
                     if (placementManager != null && cannonTowerPrefab != null) placementManager.StartPlacement(cannonTowerPrefab);
+                }
+                if (iconBomb != null)
+                {
+                    GUI.DrawTexture(new Rect(drawerX + 14, cardY + 12, 36, 36), iconBomb, ScaleMode.ScaleToFit, true);
                 }
                 GUI.enabled = true;
 
                 GUI.enabled = false;
-                GUI.Button(new Rect(drawerX + 10, cardY + 68, drawerW - 20, 50), "<b>Balista Sniper</b>\n<i>(Em breve)</i>");
+                GUI.Button(new Rect(drawerX + 10, cardY + 72, drawerW - 20, 52), "<b>Balista Sniper</b>\n<i>(Em breve)</i>");
                 GUI.enabled = true;
             }
             else if (selectedCategoryTab == 2) // Forja Runica & Alquimia
             {
                 bool canAffordRunic = (GameManager.Instance != null && GameManager.Instance.CanAfford(320));
                 GUI.enabled = canAffordRunic && state == GameState.Playing;
-                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 60), "<b>Ferreiro Runico</b>\n<color=#FFD700>320 Ouro</color>\n<size=10>Magia / Lentidao 45%</size>"))
+                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 64), "<b>Ferreiro Runico</b>\n<color=#FFD700>320 Ouro</color>\n<size=10>Magia / Lentidao 45%</size>", cardBtnStyle))
                 {
                     if (placementManager != null && runicTowerPrefab != null) placementManager.StartPlacement(runicTowerPrefab);
+                }
+                if (iconHammer != null)
+                {
+                    GUI.DrawTexture(new Rect(drawerX + 14, cardY + 12, 36, 36), iconHammer, ScaleMode.ScaleToFit, true);
                 }
                 GUI.enabled = true;
 
                 GUI.enabled = false;
-                GUI.Button(new Rect(drawerX + 10, cardY + 68, drawerW - 20, 50), "<b>Golem Protetor</b>\n<i>(Em breve)</i>");
+                GUI.Button(new Rect(drawerX + 10, cardY + 72, drawerW - 20, 52), "<b>Golem Protetor</b>\n<i>(Em breve)</i>");
                 GUI.enabled = true;
             }
             else if (selectedCategoryTab == 3) // Mineracao & Suporte
             {
                 bool canAffordMine = (GameManager.Instance != null && GameManager.Instance.CanAfford(400));
                 GUI.enabled = canAffordMine && state == GameState.Playing;
-                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 60), "<b>Mina de Ouro</b>\n<color=#FFD700>400 Ouro</color>\n<size=10>+80 Ouro por rodada</size>"))
+                if (GUI.Button(new Rect(drawerX + 10, cardY, drawerW - 20, 64), "<b>Mina de Ouro</b>\n<color=#FFD700>400 Ouro</color>\n<size=10>+80 Ouro por rodada</size>", cardBtnStyle))
                 {
                     if (placementManager != null && goldMineTowerPrefab != null) placementManager.StartPlacement(goldMineTowerPrefab);
+                }
+                if (iconGoldChest != null)
+                {
+                    GUI.DrawTexture(new Rect(drawerX + 14, cardY + 12, 36, 36), iconGoldChest, ScaleMode.ScaleToFit, true);
                 }
                 GUI.enabled = true;
 
                 GUI.enabled = false;
-                GUI.Button(new Rect(drawerX + 10, cardY + 68, drawerW - 20, 50), "<b>Posto de Vigia</b>\n<i>(Em breve)</i>");
+                GUI.Button(new Rect(drawerX + 10, cardY + 72, drawerW - 20, 52), "<b>Posto de Vigia</b>\n<i>(Em breve)</i>");
                 GUI.enabled = true;
             }
 
-            GUI.Label(new Rect(drawerX + 10, drawerY + drawerH - 45, drawerW - 20, 40), "<size=11><i>Clique direito para cancelar a colocacao.</i></size>");
+            GUI.Label(new Rect(drawerX + 10, drawerY + drawerH - 45, drawerW - 20, 40), "<size=10><i>Botao direito: cancelar.\nClique na torre: inspecionar.</i></size>");
 
-            // 3. TELAS FINAIS
+            // 3. TELAS FINAIS (VITORIA / DERROTA)
             if (state == GameState.Victory)
             {
                 GUI.Box(new Rect(screenW / 2 - 200, screenH / 2 - 130, 400, 240), "");
